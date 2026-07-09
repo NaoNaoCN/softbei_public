@@ -1,0 +1,690 @@
+﻿/* ============================================================
+   assistant.css — AI 学习助手浮窗 + 每日学习提醒
+   适配主题: 暖棕色调 · 克制装饰 · 排版驱动
+   ============================================================ */
+
+/* ===== 悬浮机器人按钮：小知·同心圆光环之眼 (SVG mascot) ===== */
+.ai-bot-fab {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    filter: drop-shadow(0 4px 14px rgba(92,54,22,0.32)) drop-shadow(0 0 12px rgba(216,152,86,0.45));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9000;
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), filter 0.4s;
+    animation: botBounce 3.6s ease-in-out infinite;
+}
+.ai-bot-fab:hover {
+    transform: scale(1.1);
+    filter: drop-shadow(0 6px 22px rgba(92,54,22,0.4)) drop-shadow(0 0 22px rgba(216,152,86,0.7));
+}
+
+/* —— SVG 之眼：FAB 主图 —— */
+/* SVG viewBox 269×269 内仅中心 r=98.5 (直径 197) 的橙色光环为 logo 本体，
+   外围 27% 是为 glow 滤镜预留的留白。
+   缩放系数 = 269 / 197 = 1.366，让橙色光环本体（不含光晕）恰好等于
+   62px 的 FAB，与 .open 态的「圆叉」按钮外径一致。 */
+.xiaozhi-eye {
+    width: 100%;
+    height: 100%;
+    display: block;
+    user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: none;
+    transform: scale(1.366);
+    transform-origin: center center;
+}
+.ai-bot-fab {
+    overflow: visible;
+}
+
+.ai-bot-fab .bot-close {
+    display: none;
+    font-size: 24px;
+    color: #fff;
+    position: relative;
+    z-index: 2;
+}
+/* 展开时退回橙色实心按钮 + 关闭叉 */
+.ai-bot-fab.open {
+    background: linear-gradient(135deg, #C77B3C 0%, #A8652E 100%);
+    filter: drop-shadow(0 4px 16px rgba(199,123,60,0.35));
+    animation: none;
+}
+.ai-bot-fab.open .xiaozhi-eye { display: none; }
+.ai-bot-fab.open .bot-close { display: block; }
+
+@keyframes botBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+/* 面板头部的小知 mini 头像 */
+.panel-bot-icon {
+    position: relative;
+    width: 26px;
+    height: 26px;
+    display: inline-block;
+    flex-shrink: 0;
+}
+.xiaozhi-eye.xz-mini {
+    width: 26px;
+    height: 26px;
+    display: inline-block;
+    filter: drop-shadow(0 0 4px rgba(216,152,86,0.45));
+}
+
+/* 未读红点 */
+.ai-bot-fab .bot-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #EF4444;
+    border: 2px solid #fff;
+    display: none;
+    z-index: 3;
+}
+.ai-bot-fab .bot-badge.show { display: block; }
+
+/* 气泡提示 */
+.ai-bot-bubble {
+    position: fixed;
+    bottom: 100px;
+    right: 32px;
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow: 0 4px 16px rgba(199, 123, 60, 0.1);
+    font-size: 13px;
+    color: #1E1E2E;
+    max-width: 220px;
+    z-index: 9001;
+    opacity: 0;
+    transform: translateY(8px) scale(0.95);
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+}
+.ai-bot-bubble.show {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+.ai-bot-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    right: 24px;
+    width: 0; height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid #fff;
+}
+
+/* ===== 主面板 ===== */
+.ai-bot-panel {
+    position: fixed;
+    bottom: 104px;
+    right: 32px;
+    width: 360px;
+    height: 520px;
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(199, 123, 60, 0.12), 0 2px 8px rgba(0,0,0,0.04);
+    z-index: 9002;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    transform: translateY(16px) scale(0.95);
+    transition: opacity 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.25s cubic-bezier(0.4,0,0.2,1);
+    pointer-events: none;
+    overflow: hidden;
+}
+.ai-bot-panel.open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+/* 面板头部 */
+.ai-panel-header {
+    background: linear-gradient(135deg, #C77B3C 0%, #A8652E 100%);
+    color: #fff;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+.ai-panel-header .panel-bot-icon { font-size: 22px; }
+.ai-panel-header .panel-title { font-size: 15px; font-weight: 600; }
+.ai-panel-header .panel-subtitle { font-size: 11px; opacity: 0.8; margin-top: 1px; }
+
+/* 今日在线时长 */
+.ai-panel-today-time {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 6px 12px;
+    min-width: 70px;
+}
+.ai-panel-today-time .today-time-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1px;
+    color: #fff;
+}
+.ai-panel-today-time .today-time-value {
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.ai-panel-today-time .today-time-label {
+    font-size: 10px;
+    opacity: 0.85;
+}
+
+/* Tab 栏 */
+.ai-panel-tabs {
+    display: flex;
+    border-bottom: 1px solid #E5E7EB;
+    flex-shrink: 0;
+    background: #F8F3EE;
+}
+.ai-panel-tab {
+    flex: 1;
+    padding: 10px 0;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6B7280;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+.ai-panel-tab:hover { color: #C77B3C; background: #FFF5EC; }
+.ai-panel-tab.active {
+    color: #C77B3C;
+    border-bottom-color: #C77B3C;
+    background: #fff;
+}
+.ai-panel-tab .tab-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+}
+
+/* Tab 内容 */
+.ai-panel-content {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+.ai-tab-pane {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    padding: 14px 16px;
+    display: none;
+}
+.ai-tab-pane.active { display: block; }
+
+/* ===== Tab1: 今日任务 ===== */
+.ai-tasks-progress {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px;
+    background: #FFF5EC;
+    border-radius: 12px;
+    margin-bottom: 14px;
+}
+.ai-tasks-progress-ring {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+}
+.ai-tasks-progress-ring svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+.ai-tasks-progress-ring .ring-bg {
+    fill: none;
+    stroke: rgba(199,123,60,0.15);
+    stroke-width: 3;
+}
+.ai-tasks-progress-ring .ring-fg {
+    fill: none;
+    stroke: #C77B3C;
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.6s ease;
+}
+.ai-tasks-progress-ring .ring-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #C77B3C;
+}
+.ai-tasks-progress-info { flex: 1; }
+.ai-tasks-progress-title { font-size: 13px; font-weight: 600; color: #1E1E2E; }
+.ai-tasks-progress-detail { font-size: 11px; color: #6B7280; margin-top: 2px; }
+.ai-tasks-streak { font-size: 11px; color: #C77B3C; font-weight: 500; margin-top: 3px; }
+
+.ai-tasks-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6B7280;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+}
+
+.ai-tasks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.ai-task-card {
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid #E5E7EB;
+    background: #fff;
+}
+.ai-task-card:hover { transform: translateX(2px); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.ai-task-card.urgent { border-left: 3px solid #EF4444; }
+.ai-task-card.warning { border-left: 3px solid #F59E0B; }
+.ai-task-card.normal { border-left: 3px solid #10B981; }
+.ai-task-card-name { font-size: 12.5px; font-weight: 500; color: #1E1E2E; margin-bottom: 2px; }
+.ai-task-card-meta { font-size: 11px; color: #9CA3AF; }
+.ai-task-card-action { font-size: 11px; color: #C77B3C; font-weight: 500; margin-top: 4px; }
+
+.ai-tasks-empty {
+    text-align: center;
+    padding: 12px;
+    font-size: 12px;
+    color: #9CA3AF;
+    background: #F9FAFB;
+    border-radius: 8px;
+}
+
+/* 每日一题 */
+.ai-quiz-card {
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 10px;
+    padding: 12px;
+}
+.ai-quiz-q {
+    font-size: 12.5px;
+    color: #1E1E2E;
+    line-height: 1.6;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+.ai-quiz-actions {
+    display: flex;
+    gap: 8px;
+}
+.ai-quiz-btn {
+    flex: 1;
+    padding: 8px 0;
+    border-radius: 8px;
+    border: 1px solid #E5E7EB;
+    background: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.ai-quiz-btn:first-child { color: #10B981; }
+.ai-quiz-btn:last-child { color: #EF4444; }
+.ai-quiz-btn:hover { background: #F9FAFB; transform: scale(1.02); }
+.ai-quiz-card.answered { background: #F9FAFB; }
+.ai-quiz-card.correct .ai-quiz-result { color: #10B981; font-weight: 600; font-size: 12px; margin-bottom: 4px; }
+.ai-quiz-card.wrong .ai-quiz-result { color: #EF4444; font-weight: 600; font-size: 12px; margin-bottom: 4px; }
+.ai-quiz-explain { font-size: 11px; color: #6B7280; line-height: 1.5; }
+
+/* 快捷入口 */
+.ai-tasks-shortcuts {
+    display: flex;
+    gap: 6px;
+    margin-top: 14px;
+}
+.ai-shortcut-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 4px;
+    border-radius: 10px;
+    background: #FFF5EC;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: #C77B3C;
+    text-decoration: none;
+    transition: all 0.2s;
+    text-align: center;
+}
+.ai-shortcut-btn:hover { background: #FEECD6; transform: translateY(-1px); }
+
+/* ===== Tab2: 学情摘要 ===== */
+.ai-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.ai-stat-card {
+    background: #FFF5EC;
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+}
+.ai-stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #C77B3C;
+}
+.ai-stat-label {
+    font-size: 11px;
+    color: #6B7280;
+    margin-top: 2px;
+}
+
+.ai-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6B7280;
+    margin: 12px 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* 遗忘复习列表 */
+.ai-review-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.ai-review-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.ai-review-item:hover { opacity: 0.85; transform: translateX(2px); }
+.ai-review-item.urgency-high { background: #FFEBEE; border: 1px solid #EF9A9A; }
+.ai-review-item.urgency-medium { background: #FFF8E1; border: 1px solid #FFE082; }
+.ai-review-item.urgency-low { background: #E8F5E9; border: 1px solid #A5D6A7; }
+.ai-review-item .review-name {
+    font-weight: 500; color: #1E1E2E;
+    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ai-review-item .review-days {
+    font-size: 11px; color: #6B7280; margin-left: 8px; white-space: nowrap;
+}
+
+.ai-empty-state {
+    text-align: center;
+    padding: 16px;
+    color: #9CA3AF;
+    font-size: 13px;
+}
+
+/* ===== Tab3: 番茄钟 ===== */
+.ai-pomodoro {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 20px;
+}
+.ai-pomo-circle {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    border: 6px solid #E5E7EB;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-bottom: 20px;
+}
+.ai-pomo-circle.running { border-color: #C77B3C; }
+.ai-pomo-circle.resting { border-color: #10B981; }
+.ai-pomo-time {
+    font-size: 36px;
+    font-weight: 700;
+    color: #1E1E2E;
+    font-variant-numeric: tabular-nums;
+}
+.ai-pomo-label {
+    font-size: 12px;
+    color: #6B7280;
+    margin-top: 4px;
+}
+.ai-pomo-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.ai-pomo-btn {
+    padding: 10px 24px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+.ai-pomo-btn.primary { background: linear-gradient(135deg, #C77B3C 0%, #A8652E 100%); color: #fff; box-shadow: 0 2px 8px rgba(199,123,60,0.3); }
+.ai-pomo-btn.primary:hover { box-shadow: 0 4px 14px rgba(168,101,46,0.4); }
+.ai-pomo-btn.danger { background: #FEF2F2; color: #EF4444; }
+.ai-pomo-btn.danger:hover { background: #FECACA; }
+.ai-pomo-btn.secondary { background: #FFF5EC; color: #6B7280; }
+.ai-pomo-btn.secondary:hover { background: #E5E7EB; }
+
+.ai-pomo-stats {
+    display: flex;
+    gap: 20px;
+    font-size: 12px;
+    color: #6B7280;
+}
+.ai-pomo-stats span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.ai-pomo-stats .pomo-count {
+    font-weight: 700;
+    color: #C77B3C;
+    font-size: 14px;
+}
+
+.ai-pomo-settings {
+    margin-top: 16px;
+    width: 100%;
+    padding-top: 14px;
+    border-top: 1px solid #E5E7EB;
+}
+.ai-pomo-setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: #6B7280;
+}
+.ai-pomo-setting-row input {
+    width: 50px;
+    border: 1px solid #E5E7EB;
+    border-radius: 6px;
+    padding: 4px 8px;
+    text-align: center;
+    font-size: 12px;
+    outline: none;
+}
+.ai-pomo-setting-row input:focus { border-color: #C77B3C; box-shadow: 0 0 0 3px rgba(199,123,60,0.1); }
+
+/* ===== 每日学习提醒弹窗 ===== */
+.daily-reminder-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+.daily-reminder-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+.daily-reminder-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 32px;
+    max-width: 420px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 16px 60px rgba(199, 123, 60, 0.18), 0 4px 12px rgba(0,0,0,0.06);
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+.daily-reminder-overlay.show .daily-reminder-card {
+    transform: scale(1) translateY(0);
+}
+.daily-reminder-icon {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.daily-reminder-greeting { font-size: 20px; font-weight: 700; color: #C77B3C; margin-bottom: 8px; }
+.daily-reminder-time { font-size: 13px; color: #6B7280; margin-bottom: 20px; }
+.daily-reminder-section { text-align: left; margin-bottom: 16px; }
+.daily-reminder-section-title {
+    font-size: 13px; font-weight: 600; color: #1E1E2E; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+}
+.daily-reminder-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.daily-reminder-tag { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; }
+.daily-reminder-tag.urgent { background: #FFEBEE; color: #E53935; }
+.daily-reminder-tag.medium { background: #FFF3E0; color: #F57C00; }
+.daily-reminder-tag.normal { background: #E8F5E9; color: #43A047; }
+.daily-reminder-tip {
+    background: #FFF5EC; border-radius: 12px; padding: 12px 16px;
+    font-size: 13px; color: #C77B3C; line-height: 1.6; margin-bottom: 20px; text-align: left;
+}
+.daily-reminder-actions { display: flex; gap: 10px; justify-content: center; }
+.daily-reminder-btn {
+    padding: 10px 24px; border-radius: 10px; font-size: 14px;
+    font-weight: 600; cursor: pointer; border: none; transition: all 0.2s;
+}
+.daily-reminder-btn.primary { background: linear-gradient(135deg, #C77B3C 0%, #A8652E 100%); color: #fff; box-shadow: 0 4px 14px rgba(199,123,60,0.3); }
+.daily-reminder-btn.primary:hover { box-shadow: 0 6px 20px rgba(168,101,46,0.4); transform: translateY(-1px); }
+.daily-reminder-btn.secondary { background: #FFF5EC; color: #6B7280; }
+.daily-reminder-btn.secondary:hover { background: #E5E7EB; }
+.daily-motivation { font-size: 13px; color: #9CA3AF; font-style: italic; margin-top: 12px; }
+
+/* ===== 每小时休息提醒弹窗 ===== */
+.rest-reminder-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+.rest-reminder-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+.rest-reminder-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 32px;
+    max-width: 380px;
+    width: 85%;
+    text-align: center;
+    box-shadow: 0 16px 60px rgba(199, 123, 60, 0.18), 0 4px 12px rgba(0,0,0,0.06);
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+.rest-reminder-overlay.show .rest-reminder-card {
+    transform: scale(1) translateY(0);
+}
+.rest-reminder-icon {
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.rest-reminder-title {
+    font-size: 18px; font-weight: 700; color: #C77B3C; margin-bottom: 8px;
+}
+.rest-reminder-desc {
+    font-size: 14px; color: #6B7280; line-height: 1.7; margin-bottom: 20px;
+}
+.rest-reminder-hours-label {
+    font-size: 13px; color: #9CA3AF; margin-bottom: 4px;
+}
+.rest-reminder-hours {
+    font-size: 36px; font-weight: 800; color: #C77B3C;
+    margin-bottom: 20px;
+}
+.rest-reminder-hours-unit {
+    font-size: 16px; font-weight: 600; margin-left: 4px;
+}
+.rest-reminder-btn {
+    padding: 12px 32px; border-radius: 10px; font-size: 14px;
+    font-weight: 600; cursor: pointer; border: none;
+    background: linear-gradient(135deg, #C77B3C 0%, #A8652E 100%); color: #fff;
+    box-shadow: 0 4px 14px rgba(199,123,60,0.3);
+    transition: all 0.2s;
+}
+.rest-reminder-btn:hover { box-shadow: 0 6px 20px rgba(168,101,46,0.4); transform: translateY(-1px); }

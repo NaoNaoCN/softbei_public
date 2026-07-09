@@ -1,0 +1,2718 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
+    <title>学习路径 - 个性化学习助手</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <script src="https://unpkg.com/lucide@0.460.0"></script>
+    <link rel="stylesheet" href="./assets/styles-v4.css">
+    <link rel="stylesheet" href="./assets/assistant.css">
+    <style>
+
+        /* Tabs */
+
+        /* KG Graph Container */
+        .kg-container {
+            background: #fff;
+            border: 1px solid var(--divider);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            min-height: 400px;
+        }
+        .kg-main {
+            display: block;
+        }
+        .kg-graph-area {
+            width: 100%;
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            background:
+                /* Nebula glow - center (warm amber) */
+                radial-gradient(ellipse at 50% 50%, rgba(199,123,60,0.08) 0%, transparent 60%),
+                /* Nebula glow - offset (bronze + olive) */
+                radial-gradient(ellipse at 75% 30%, rgba(212,133,43,0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 25% 70%, rgba(94,154,130,0.04) 0%, transparent 50%),
+                /* Base gradient - warm dark */
+                linear-gradient(135deg, #1a1714 0%, #1f1c18 40%, #242018 70%, #1a1714 100%);
+            transition: background 0.3s ease;
+        }
+        .kg-graph-area.light-bg {
+            background: linear-gradient(135deg, #FBF7F1 0%, #F4ECDF 50%, #EFE4D2 100%);
+        }
+        .kg-graph-area.light-bg::before {
+            display: none;
+        }
+        .kg-graph-area::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            background-image:
+                radial-gradient(1px 1px at 3% 8%, rgba(255,255,255,0.6) 0%, transparent 100%),
+                radial-gradient(1px 1px at 7% 35%, rgba(255,255,255,0.45) 0%, transparent 100%),
+                radial-gradient(1.2px 1.2px at 10% 62%, rgba(255,255,255,0.7) 0%, transparent 100%),
+                radial-gradient(1px 1px at 14% 88%, rgba(255,255,255,0.35) 0%, transparent 100%),
+                radial-gradient(1px 1px at 18% 22%, rgba(255,255,255,0.5) 0%, transparent 100%),
+                radial-gradient(1.5px 1.5px at 22% 50%, rgba(255,255,255,0.65) 0%, transparent 100%),
+                radial-gradient(1px 1px at 26% 75%, rgba(255,255,255,0.4) 0%, transparent 100%),
+                radial-gradient(1px 1px at 30% 12%, rgba(255,255,255,0.55) 0%, transparent 100%),
+                radial-gradient(1.2px 1.2px at 34% 42%, rgba(255,255,255,0.5) 0%, transparent 100%),
+                radial-gradient(1px 1px at 38% 68%, rgba(255,255,255,0.35) 0%, transparent 100%),
+                radial-gradient(1px 1px at 42% 5%, rgba(255,255,255,0.6) 0%, transparent 100%),
+                radial-gradient(1.5px 1.5px at 46% 30%, rgba(255,255,255,0.7) 0%, transparent 100%),
+                radial-gradient(1px 1px at 50% 55%, rgba(255,255,255,0.4) 0%, transparent 100%),
+                radial-gradient(1px 1px at 54% 82%, rgba(255,255,255,0.5) 0%, transparent 100%),
+                radial-gradient(1.2px 1.2px at 58% 18%, rgba(255,255,255,0.55) 0%, transparent 100%),
+                radial-gradient(1px 1px at 62% 45%, rgba(255,255,255,0.3) 0%, transparent 100%),
+                radial-gradient(1px 1px at 66% 72%, rgba(255,255,255,0.6) 0%, transparent 100%),
+                radial-gradient(1.5px 1.5px at 70% 95%, rgba(255,255,255,0.45) 0%, transparent 100%),
+                radial-gradient(1px 1px at 74% 28%, rgba(255,255,255,0.5) 0%, transparent 100%),
+                radial-gradient(1.2px 1.2px at 78% 58%, rgba(255,255,255,0.65) 0%, transparent 100%),
+                radial-gradient(1px 1px at 82% 8%, rgba(255,255,255,0.4) 0%, transparent 100%),
+                radial-gradient(1px 1px at 85% 38%, rgba(255,255,255,0.55) 0%, transparent 100%),
+                radial-gradient(1.5px 1.5px at 88% 65%, rgba(255,255,255,0.7) 0%, transparent 100%),
+                radial-gradient(1px 1px at 91% 85%, rgba(255,255,255,0.35) 0%, transparent 100%),
+                radial-gradient(1px 1px at 94% 15%, rgba(255,255,255,0.5) 0%, transparent 100%),
+                radial-gradient(1.2px 1.2px at 97% 48%, rgba(255,255,255,0.6) 0%, transparent 100%),
+                radial-gradient(1px 1px at 12% 48%, rgba(255,255,255,0.3) 0%, transparent 100%),
+                radial-gradient(1px 1px at 36% 92%, rgba(255,255,255,0.45) 0%, transparent 100%),
+                radial-gradient(1.5px 1.5px at 60% 3%, rgba(255,255,255,0.5) 0%, transparent 100%),
+                radial-gradient(1px 1px at 84% 52%, rgba(255,255,255,0.4) 0%, transparent 100%);
+        }
+        .kg-detail-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 340px;
+            height: 100vh;
+            background: #fff;
+            border-left: 1px solid var(--divider);
+            box-shadow: var(--shadow-modal);
+            padding: 20px;
+            overflow-y: auto;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .kg-detail-panel.open {
+            transform: translateX(0);
+        }
+        .kg-detail-panel .panel-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: var(--bg-sidebar);
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: var(--text-3);
+            transition: all 0.2s;
+        }
+        .kg-detail-panel .panel-close:hover { background: var(--divider); color: var(--text-1); }
+        .kg-detail-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(45,35,24,0.25);
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .kg-detail-backdrop.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .kg-detail-panel h3 { font-size: 15px; font-weight: 600; margin-bottom: 8px; color: var(--text-1); }
+        .kg-detail-panel .detail-type { display: inline-block; font-size: 11px; background: var(--accent-soft); color: var(--accent); padding: 2px 8px; border-radius: 4px; margin-bottom: 8px; }
+        .kg-detail-panel .detail-id { font-size: 11px; color: var(--text-3); margin-bottom: 8px; word-break: break-all; }
+        .kg-detail-panel .detail-desc { font-size: 13px; color: var(--text-2); margin-bottom: 12px; line-height: 1.5; }
+        .kg-detail-panel .detail-section { font-size: 13px; font-weight: 600; color: var(--text-2); margin: 12px 0 6px; }
+        .kg-detail-panel .relation-item { font-size: 12px; color: var(--text-2); padding: 4px 0; display: flex; align-items: center; gap: 4px; }
+        .kg-detail-panel .resource-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: #fff; border: 1px solid var(--divider); border-radius: 6px; margin-bottom: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+        .kg-detail-panel .resource-item:hover { border-color: var(--accent); }
+        .kg-detail-panel .detail-actions { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+        .kg-detail-panel .detail-actions button { width: 100%; }
+        /* Relation list (Plan A) */
+        .rel-group { margin: 6px 0; border: 1px solid var(--divider); border-radius: 8px; overflow: hidden; }
+        .rel-group summary { font-size: 13px; font-weight: 600; color: var(--text-2); padding: 8px 10px; cursor: pointer; display: flex; align-items: center; gap: 6px; background: var(--bg-page); }
+        .rel-group summary::-webkit-details-marker { display: none; }
+        .rel-group summary::before { content: '▸'; display: inline-block; font-size: 10px; transition: transform 0.2s; width: 12px; color: var(--text-3); }
+        .rel-group[open] summary::before { transform: rotate(90deg); }
+        .rel-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .rel-item { display: flex; align-items: center; gap: 6px; padding: 5px 6px 5px 26px; font-size: 12px; color: var(--text-1); cursor: pointer; border-radius: 0; transition: background 0.15s; }
+        .rel-item:hover { background: rgba(199,123,60,0.08); }
+        .rel-item:last-child { border-radius: 0 0 8px 8px; }
+        .rel-item .rel-type-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+        .rel-item .rel-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .rel-item .rel-tag { font-size: 10px; color: var(--text-3); background: var(--bg-page); padding: 1px 5px; border-radius: 3px; flex-shrink: 0; }
+        .rel-item .rel-arrow { font-size: 10px; color: var(--text-3); flex-shrink: 0; }
+        .rel-more { font-size: 11px; color: var(--accent); cursor: pointer; padding: 3px 6px 3px 18px; }
+        .rel-more:hover { text-decoration: underline; }
+        .kg-placeholder {
+            text-align: center;
+            color: var(--text-3);
+            padding: 60px 20px;
+        }
+        .kg-placeholder-icon { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.5; display: inline-flex; align-items: center; justify-content: center; }
+        .kg-placeholder-text { font-size: 14px; }
+
+        /* KG Progress Bar */
+        .kg-progress-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            background: var(--success-soft);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: var(--success);
+        }
+        .kg-progress-bar .bar { flex: 1; height: 6px; background: rgba(110,148,102,0.25); border-radius: 3px; overflow: hidden; }
+        .kg-progress-bar .bar-fill { height: 100%; background: var(--success); border-radius: 3px; }
+
+        /* KG Toolbar — unified card */
+        .kg-toolbar {
+            background: #fff;
+            border: 1px solid var(--divider);
+            border-radius: var(--r-lg);
+            padding: 14px 18px;
+            margin-bottom: 20px;
+        }
+        .kg-toolbar-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .kg-toolbar-row + .kg-toolbar-row {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--divider);
+        }
+        .kg-select {
+            padding: 8px 34px 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            font-size: 13px;
+            font-family: var(--font);
+            background: var(--bg-page);
+            color: var(--text-1);
+            cursor: pointer;
+            outline: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238C7B68' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .kg-select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+        .kg-search-wrap {
+            flex: 1;
+            min-width: 220px;
+            display: flex;
+        }
+        .kg-search-wrap .form-input {
+            border-radius: var(--r-sm) 0 0 var(--r-sm);
+            border-right: none;
+            padding-top: 5px;
+            padding-bottom: 5px;
+            font-size: 13px;
+            height: 32px;
+        }
+        .kg-search-wrap .form-input:focus {
+            border-right: none;
+        }
+        .kg-search-wrap .btn {
+            border-radius: 0 var(--r-sm) var(--r-sm) 0;
+            flex-shrink: 0;
+        }
+        .kg-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: var(--text-2);
+            cursor: pointer;
+            user-select: none;
+            padding: 5px 10px;
+            border-radius: var(--r-sm);
+            border: 1px solid transparent;
+            transition: all 0.15s;
+        }
+        .kg-toggle:hover {
+            background: var(--bg-hover);
+            border-color: var(--divider);
+        }
+        .kg-toggle input[type="checkbox"] {
+            width: 15px;
+            height: 15px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        /* Legend chips */
+        .kg-legend-group {
+            display: flex;
+            gap: 3px;
+            align-items: center;
+        }
+        .kg-legend-chip {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 5px 12px;
+            border-radius: var(--r-full);
+            border: 1px solid var(--divider);
+            background: #fff;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .kg-legend-chip:hover {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+        }
+        .kg-legend-chip.active {
+            background: var(--accent-soft);
+            border-color: rgba(199,123,60,0.35);
+            color: var(--accent);
+            font-weight: 500;
+        }
+        .kg-legend-chip:not(.active) {
+            opacity: 0.4;
+            background: var(--bg-page);
+        }
+
+        /* Pathway select in detail panel */
+        .pathway-select-list { max-height: 150px; overflow-y: auto; border: 1px solid var(--divider); border-radius: 12px; margin-top: 6px; }
+        .pathway-select-item { padding: 8px 12px; font-size: 12px; cursor: pointer; transition: background 0.2s; }
+        .pathway-select-item:hover { background: var(--accent-soft); }
+
+        /* ===== 学习计划 ===== */
+        .sp-toolbar {
+            display: flex; align-items: center; gap: 16px;
+            margin-bottom: 20px;
+        }
+        .sp-toolbar-hint { font-size: 13px; color: var(--text-3); flex: 1; }
+
+        .sp-plan-card {
+            background: #fff;
+            border: 1px solid var(--divider);
+            border-radius: 12px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+        .sp-plan-header {
+            display: flex; align-items: center; gap: 12px;
+            padding: 16px 20px; cursor: pointer;
+            user-select: none;
+        }
+        .sp-plan-header:hover { background: var(--accent-soft); }
+        .sp-plan-header-left { flex: 1; min-width: 0; }
+        .sp-plan-title { font-size: 16px; font-weight: 600; color: var(--text-1); }
+        .sp-plan-meta { font-size: 12px; color: var(--text-3); margin-top: 3px; }
+        .sp-plan-status {
+            font-size: 12px; padding: 3px 10px; border-radius: 20px;
+            font-weight: 500;
+        }
+        .sp-plan-status.active { background: #E8F5E9; color: #2E7D32; }
+        .sp-plan-status.archived { background: #F3E5F5; color: #7B1FA2; }
+        .sp-plan-status.completed { background: #E3F2FD; color: #1565C0; }
+        .sp-plan-arrow { transition: transform 0.25s; flex-shrink: 0; }
+        .sp-plan-card.collapsed .sp-plan-arrow { transform: rotate(-90deg); }
+        .sp-plan-card.collapsed .sp-plan-body { display: none; }
+        .sp-plan-body { padding: 0 20px 20px; }
+        .sp-plan-progress {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 16px; font-size: 13px; color: var(--text-2);
+        }
+        .sp-progress-bar {
+            flex: 1; height: 6px; background: var(--bg-2);
+            border-radius: 3px; overflow: hidden;
+        }
+        .sp-progress-fill {
+            height: 100%; background: var(--accent);
+            border-radius: 3px; transition: width 0.3s;
+        }
+        .sp-day-group {
+            margin-bottom: 12px; border: 1px solid var(--divider);
+            border-radius: 8px; overflow: hidden;
+        }
+        .sp-day-label {
+            display: flex; align-items: center; gap: 6px;
+            padding: 10px 14px; background: var(--bg-1);
+            font-size: 14px; font-weight: 600; color: var(--text-1);
+            cursor: pointer; user-select: none;
+        }
+        .sp-day-label-arrow { width: 14px; height: 14px; transition: transform 0.2s; flex-shrink: 0; }
+        .sp-day-group.collapsed .sp-day-label-arrow { transform: rotate(-90deg); }
+        .sp-day-group.collapsed .sp-day-items { display: none; }
+        .sp-day-items { padding: 8px 0; }
+        .sp-item-row {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 10px 14px; border-bottom: 1px solid var(--divider);
+        }
+        .sp-item-row:last-child { border-bottom: none; }
+        .sp-item-check {
+            width: 20px; height: 20px; border-radius: 50%;
+            border: 2px solid var(--divider); flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; margin-top: 1px; transition: all 0.2s;
+        }
+        .sp-item-check.done { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .sp-item-check:hover { border-color: var(--accent); }
+        .sp-item-info { flex: 1; min-width: 0; }
+        .sp-item-name { font-size: 14px; font-weight: 500; color: var(--text-1); cursor: pointer; }
+        .sp-item-name.done { color: var(--text-3); text-decoration: line-through; }
+        .sp-item-name:hover { color: var(--accent); }
+        .sp-item-meta { font-size: 12px; color: var(--text-3); margin-top: 3px; display: flex; gap: 12px; flex-wrap: wrap; }
+        .sp-item-resources {
+            display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+            margin-top: 6px;
+        }
+        .sp-res-tag {
+            font-size: 11px; padding: 2px 8px; border-radius: 4px;
+            background: var(--accent-soft); color: var(--accent);
+            cursor: pointer;
+        }
+        .sp-res-missing {
+            font-size: 11px; padding: 2px 8px; border-radius: 4px;
+            background: #FFF3E0; color: #E65100; cursor: pointer;
+        }
+        .sp-plan-header-btn { font-size: 12px; padding: 4px 10px; white-space: nowrap; }
+
+        /* 生成对话框 */
+        .sp-dialog-overlay {
+            position: fixed; inset: 0; z-index: 10000;
+            background: rgba(0,0,0,0.35); backdrop-filter: blur(2px);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        }
+        .sp-dialog-overlay.open { opacity: 1; pointer-events: auto; }
+        .sp-dialog {
+            background: #fff; border-radius: 16px; padding: 28px;
+            max-width: 440px; width: 90%;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+        }
+        .sp-dialog h3 { font-size: 17px; font-weight: 600; color: var(--text-1); margin: 0 0 16px; }
+        .sp-dialog-row { display: flex; gap: 12px; margin-bottom: 14px; }
+        .sp-dialog-row label { font-size: 13px; color: var(--text-2); min-width: 72px; line-height: 36px; }
+        .sp-dialog-row input { flex: 1; }
+        .sp-dialog .dialog-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+
+        /* ===== 学习路径 Tab 改版：路线图样式 ===== */
+
+        /* 路径切换器 */
+        .pathway-tabs {
+            flex-wrap: wrap; align-items: center;
+        }
+        .pathway-tab-more {
+            position: relative;
+        }
+        .pathway-tab-more-menu {
+            display: none;
+            position: absolute;
+            top: 100%; left: 0;
+            background: #fff;
+            border: 1px solid var(--divider);
+            border-radius: 8px;
+            box-shadow: var(--shadow-md);
+            z-index: 10;
+            min-width: 160px;
+            padding: 4px 0;
+        }
+        .pathway-tab-more-menu .pathway-tab-sub {
+            display: block;
+            width: 100%;
+            padding: 8px 16px;
+            font-size: 14px;
+            color: var(--text-1);
+            background: none; border: none;
+            cursor: pointer;
+            text-align: left;
+        }
+        .pathway-tab-sub:hover { background: var(--accent-soft); }
+        .pathway-tab-add {
+            margin-left: auto;
+            padding: 6px 14px;
+            font-size: 13px; font-weight: 500;
+            color: var(--accent);
+            background: transparent;
+            border: 1px dashed var(--accent);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .pathway-tab-add:hover { background: var(--accent-soft); }
+
+        /* 路线卡片 */
+        .roadmap-card {
+            background: var(--glass, rgba(255,255,255,0.50));
+            backdrop-filter: blur(20px) saturate(150%);
+            border: 1px solid var(--border-glass, rgba(255,255,255,0.30));
+            border-radius: var(--r-lg, 16px);
+            padding: 24px;
+            box-shadow: var(--shadow-glass, 0 4px 20px rgba(120,84,44,0.06));
+            margin-bottom: 24px;
+        }
+        .roadmap-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        .roadmap-title {
+            font-family: var(--display, 'DM Serif Display', 'Noto Serif SC', serif);
+            font-size: 20px; font-weight: 700;
+            color: var(--text-1);
+        }
+        .roadmap-meta {
+            font-size: 12px; color: var(--text-3);
+            margin-top: 4px;
+        }
+        .roadmap-actions-header {
+            display: flex; gap: 8px; align-items: center;
+        }
+
+        /* 节点进度尺 */
+        .progress-stepper {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            padding: 16px 0 20px;
+            overflow-x: auto;
+        }
+        .progress-node {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 600;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            position: relative;
+        }
+        .progress-node:hover { transform: scale(1.25); }
+        .progress-node.done { background: var(--success); color: #fff; }
+        .progress-node.current {
+            background: var(--warning); color: #fff;
+            animation: pulse-subtle 2.5s ease-in-out infinite;
+        }
+        .progress-node.pending { background: var(--divider); color: var(--text-3); }
+        .progress-connector {
+            width: 36px; height: 3px;
+            flex-shrink: 0;
+            border-radius: 2px;
+        }
+        .progress-connector.done { background: var(--success); }
+        .progress-connector.pending { background: var(--divider); }
+
+        /* 知识点行 */
+        .step-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px 16px;
+            border-radius: var(--r-md, 10px);
+            background: var(--glass, rgba(255,255,255,0.50));
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+            min-height: 72px;
+            cursor: default;
+        }
+        .step-row + .step-row { margin-top: 8px; }
+        .step-row:hover {
+            border-color: var(--border-glass, rgba(255,255,255,0.30));
+            box-shadow: 0 2px 12px rgba(120,84,44,0.08);
+        }
+        .step-row.dragging {
+            opacity: 0.4;
+            box-shadow: 0 8px 24px rgba(120,84,44,0.16);
+            border-color: var(--accent);
+        }
+        .step-row.drag-over {
+            border-color: var(--accent);
+            border-style: dashed;
+            box-shadow: 0 0 0 2px rgba(199,123,60,0.15);
+        }
+        .step-row.completed { border-left: 0; }
+        .step-row.in-progress { background: rgba(201,138,46,0.06); }
+        .step-row.pending {}
+
+        /* 序号圆点 */
+        .step-indicator {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; font-weight: 700;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .step-indicator.done { background: var(--success); color: #fff; }
+        .step-indicator.current { background: var(--warning); color: #fff; animation: pulse-subtle 2.5s ease-in-out infinite; }
+        .step-indicator.pending { background: var(--divider); color: var(--text-3); }
+
+        /* 步骤内容 */
+        .step-body { flex: 1; min-width: 0; }
+        .step-name { font-size: 14px; font-weight: 600; color: var(--text-1); cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .step-name:hover { color: var(--accent); }
+        .step-score { font-size: 12px; font-weight: 500; padding: 1px 6px; border-radius: 4px; }
+        .step-score.mastered { background: var(--success-soft); color: var(--success); }
+        .step-score.learning { background: var(--warning-soft); color: var(--warning); }
+        .step-score.none { background: rgba(188,174,156,0.12); color: var(--text-3); }
+        .step-summary {
+            font-size: 12px; color: var(--text-3);
+            margin-top: 2px;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+
+        /* 步骤操作按钮 */
+        .step-actions {
+            display: flex; align-items: center; gap: 4px;
+            flex-shrink: 0;
+            opacity: 0.4; transition: opacity 0.2s;
+        }
+        .step-row:hover .step-actions { opacity: 1; }
+        .step-action-btn {
+            width: 32px; height: 32px;
+            border: none; background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--text-2);
+            transition: all 0.15s;
+        }
+        .step-action-btn:hover { background: var(--accent-soft); color: var(--accent); }
+        .step-action-btn.danger:hover { background: var(--danger-soft); color: var(--danger); }
+        .step-action-btn.drag-handle { cursor: grab; }
+        .step-action-btn.drag-handle:active { cursor: grabbing; }
+
+        /* 展开详情 */
+        .step-expand {
+            display: none;
+            margin-top: 8px;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.50);
+            border: 1px solid var(--divider);
+            border-radius: var(--r-md, 10px);
+            font-size: 13px; color: var(--text-2);
+            max-height: 150px; overflow-y: auto;
+        }
+        .step-row.expanded .step-expand { display: block; }
+        .step-expand-section { margin-bottom: 8px; }
+        .step-expand-label { font-weight: 600; color: var(--text-1); margin-bottom: 4px; }
+        .step-expand-link {
+            color: var(--accent); cursor: pointer;
+            margin-right: 12px; font-size: 12px;
+        }
+        .step-expand-link:hover { text-decoration: underline; }
+
+        /* 空路线图 */
+        .roadmap-empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-3);
+        }
+        .roadmap-empty-icon {
+            width: 64px; height: 64px;
+            margin: 0 auto 16px;
+            opacity: 0.4;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .roadmap-empty-title { font-size: 16px; font-weight: 600; color: var(--text-1); margin-bottom: 8px; }
+        .roadmap-empty-desc { font-size: 13px; margin-bottom: 24px; line-height: 1.5; }
+        .roadmap-empty-actions { display: flex; gap: 12px; justify-content: center; }
+
+        /* 创建路径对话框 */
+        .pathway-dialog-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.35);
+            z-index: 100;
+            align-items: center; justify-content: center;
+        }
+        .pathway-dialog-overlay.open { display: flex; }
+        .pathway-dialog {
+            background: #fff;
+            border-radius: var(--r-lg, 16px);
+            padding: 24px;
+            width: min(420px, 92vw);
+            box-shadow: 0 14px 40px rgba(120,84,44,0.18);
+        }
+        .pathway-dialog h3 {
+            font-size: 17px; font-weight: 600;
+            color: var(--text-1);
+            margin-bottom: 12px;
+        }
+        .pathway-dialog .form-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            margin-bottom: 16px;
+        }
+        .pathway-dialog .form-input:focus { border-color: var(--accent); }
+        .pathway-dialog .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+        /* 页面特有按钮 */
+        .btn-delete {
+            padding: 6px 12px;
+            background: #fff;
+            color: var(--danger);
+            border: 1px solid rgba(201,96,90,0.30);
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-delete:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+        /* 脉冲动画 */
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* ===== KG 知识点列表改版：紧凑数据表 ===== */
+        .kg-node-list {
+            margin-top: 16px;
+            background: var(--glass, rgba(255,255,255,0.50));
+            backdrop-filter: blur(20px) saturate(150%);
+            border: 1px solid var(--border-glass, rgba(255,255,255,0.30));
+            border-radius: var(--r-lg, 16px);
+            box-shadow: var(--shadow-glass, 0 4px 20px rgba(120,84,44,0.06));
+            overflow: hidden;
+        }
+        .kg-node-section {
+            border-bottom: 1px solid var(--divider);
+        }
+        .kg-node-section:last-child { border-bottom: none; }
+        .kg-node-section-header {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.40);
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s;
+        }
+        .kg-node-section-header:hover { background: rgba(255,255,255,0.60); }
+        .kg-node-section-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .kg-node-section-label {
+            font-size: 13px; font-weight: 600;
+            color: var(--text-1);
+        }
+        .kg-node-section-count {
+            font-size: 12px; color: var(--text-3);
+            margin-left: auto;
+        }
+        .kg-node-section-arrow {
+            width: 16px; height: 16px;
+            color: var(--text-3);
+            transition: transform 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .kg-node-section.collapsed .kg-node-section-arrow {
+            transform: rotate(-90deg);
+        }
+        .kg-node-rows {
+            max-height: 2000px;
+            opacity: 1;
+            padding: 0 20px 8px;
+            overflow: hidden;
+            transition: max-height 0.35s ease, opacity 0.25s ease, padding 0.35s ease;
+        }
+        .kg-node-section.collapsed .kg-node-rows {
+            max-height: 0;
+            opacity: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .kg-node-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            min-height: 42px;
+        }
+        .kg-node-row:hover { background: rgba(199,123,60,0.06); }
+        .kg-node-row.learned { background: rgba(110,148,102,0.06); }
+        .kg-node-row.learned:hover { background: rgba(110,148,102,0.10); }
+        .kg-node-row-indicator {
+            width: 20px; height: 20px;
+            flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .kg-node-row-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .kg-node-row-name {
+            flex: 1; min-width: 0;
+            font-size: 13px; font-weight: 500;
+            color: var(--text-1);
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .kg-node-row.learned .kg-node-row-name { color: var(--text-1); }
+        .kg-node-row-meta {
+            font-size: 11px; color: var(--text-4);
+            flex-shrink: 0;
+            font-family: var(--mono, monospace);
+        }
+        .kg-node-row-actions {
+            display: flex; gap: 2px;
+            flex-shrink: 0;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .kg-node-row:hover .kg-node-row-actions { opacity: 1; }
+        .kg-node-row-btn {
+            width: 26px; height: 26px;
+            border: none; background: transparent;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--text-3);
+            transition: all 0.15s;
+        }
+        .kg-node-row-btn:hover { background: var(--accent-soft); color: var(--accent); }
+        .kg-node-list-empty {
+            text-align: center;
+            padding: 32px 20px;
+            color: var(--text-3);
+            font-size: 13px;
+        }
+        .kg-node-list-toolbar {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 20px;
+            border-bottom: 1px solid var(--divider);
+            font-size: 12px; color: var(--text-3);
+        }
+        .kg-node-list-sort {
+            margin-left: auto;
+            font-size: 12px;
+            padding: 3px 8px;
+            border: 1px solid var(--divider);
+            border-radius: 4px;
+            background: #fff;
+            cursor: pointer;
+            outline: none;
+        }
+
+        /* KG 全屏模式 */
+        body.kg-fullscreen .topbar,
+        body.kg-fullscreen .page-title,
+        body.kg-fullscreen .page-subtitle,
+        body.kg-fullscreen .tab-bar,
+        body.kg-fullscreen #tab-pathways,
+        body.kg-fullscreen #tab-study-plan,
+        body.kg-fullscreen #node-grid-section { display: none !important; }
+
+        body.kg-fullscreen .main { margin-left: 0; padding: 0; }
+        body.kg-fullscreen #tab-kg { position: fixed; inset: 0; z-index: 9999; background: #151210; padding: 16px; overflow: auto; display: block !important; }
+        body.kg-fullscreen .kg-graph-area.light-bg ~ * ,
+        body.kg-fullscreen:has(.kg-graph-area.light-bg) #tab-kg { background: #FAF8F5; }
+        body.kg-fullscreen #kg-chart { height: calc(100vh - 120px) !important; }
+
+        .kg-fullscreen-close {
+            display: none; position: fixed; top: 16px; right: 16px; z-index: 10000;
+            width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(30,40,55,0.9); color: #fff; font-size: 18px; cursor: pointer;
+        }
+        body.kg-fullscreen .kg-fullscreen-close { display: flex; align-items: center; justify-content: center; }
+
+        /* Zoom control knob */
+
+    </style>
+</head>
+<body>
+    <div id="view">
+    <div class="app-layout">
+        <div class="app-content">
+        <div class="app-body">
+            <h1 class="page-title">学习规划</h1>
+            <p class="page-subtitle">查看知识图谱结构，规划和管理个性化学习路径，高效达成学习目标。</p>
+
+            <!-- Tabs -->
+            <div class="tab-bar">
+                <button class="tab-btn active" onclick="switchTab(this, 'kg')">知识图谱</button>
+                <button class="tab-btn" onclick="switchTab(this, 'pathways')">我的路径</button>
+                <button class="tab-btn" onclick="switchTab(this, 'study-plan')">学习计划</button>
+            </div>
+
+            <!-- KG Tab -->
+            <div id="tab-kg">
+                <button class="kg-fullscreen-close" id="kg-fullscreen-close" onclick="exitKgFullscreen()">✕</button>
+                <!-- KG Toolbar -->
+                <div class="kg-toolbar">
+                    <div class="kg-toolbar-row">
+                        <select class="kg-select" id="kg-doc-select">
+                            <option value="">全部文档</option>
+                        </select>
+                        <select class="kg-select" id="kg-depth">
+                            <option value="1">深度：1</option>
+                            <option value="2" selected>深度：2</option>
+                            <option value="3">深度：3</option>
+                            <option value="4">深度：4</option>
+                            <option value="5">深度：5</option>
+                        </select>
+                        <select class="kg-select" id="kg-root-select">
+                            <option value="">全部根节点</option>
+                        </select>
+                        <div class="kg-search-wrap">
+                            <input type="text" class="form-input" id="kg-search" placeholder="搜索知识点...">
+                            <button class="btn btn-primary btn-sm" id="kg-search-btn">搜索</button>
+                        </div>
+                        <select class="kg-select" id="kg-pathway-overlay">
+                            <option value="">路径叠加：无</option>
+                        </select>
+                        <button class="btn btn-secondary btn-sm" onclick="loadKgGraph()">刷新</button>
+                        <button class="btn btn-secondary btn-sm" onclick="enterKgFullscreen()">全屏查看</button>
+                    </div>
+                    <div class="kg-toolbar-row">
+                        <span class="kg-legend-group" id="kg-legend-group">
+                            <span class="kg-legend-chip active" data-type="Course" onclick="toggleLegendType(this)"><span style="color:#D4852B;">●</span> 课程</span>
+                            <span class="kg-legend-chip active" data-type="Chapter" onclick="toggleLegendType(this)"><span style="color:#5E9A82;">●</span> 章节</span>
+                            <span class="kg-legend-chip active" data-type="KnowledgePoint" onclick="toggleLegendType(this)"><span style="color:#C59642;">●</span> 知识点</span>
+                            <span class="kg-legend-chip active" data-type="SubPoint" onclick="toggleLegendType(this)"><span style="color:#B65C6E;">●</span> 子点</span>
+                            <span class="kg-legend-chip active" data-type="Concept" onclick="toggleLegendType(this)"><span style="color:#887AA5;">●</span> 概念</span>
+                        </span>
+                        <label class="kg-toggle">
+                            <input type="checkbox" id="kg-learned-toggle"> 已学习视图
+                        </label>
+                        <label class="kg-toggle">
+                            <input type="checkbox" id="kg-bg-toggle" checked> 浅色背景
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Learned progress bar (hidden by default) -->
+                <div class="kg-progress-bar" id="kg-learned-progress" style="display:none;">
+                    <span id="kg-learned-text">已学习 0 / 0 (0%)</span>
+                    <div class="bar"><div class="bar-fill" id="kg-learned-fill" style="width:0%"></div></div>
+                </div>
+
+                <!-- KG Graph -->
+                <div class="kg-container">
+                    <div class="kg-main">
+                        <div class="kg-graph-area light-bg">
+                            <div id="kg-chart" style="width:100%;height:700px;position:relative;z-index:1;"></div>
+
+                            <div class="kg-placeholder" id="kg-placeholder" style="display:none;">
+                                <div class="kg-placeholder-icon"><i data-lucide="git-branch"></i></div>
+                                <div class="kg-placeholder-text">知识图谱加载中，请稍候...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Node List -->
+                <div style="margin-top:24px;">
+                    <div style="font-size:15px;font-weight:600;color:var(--text-1);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+                        知识点列表
+                        <span style="font-size:12px;color:var(--text-3);font-weight:400;" id="kg-node-count"></span>
+                    </div>
+                    <div class="kg-node-list" id="node-grid"></div>
+                </div>
+            </div>
+
+            <!-- Pathways Tab -->
+            <div id="tab-pathways" style="display:none;">
+                <div class="tab-bar pathway-tabs" id="pathway-tabs"></div>
+                <div id="roadmap-container">
+                    <div class="roadmap-empty" id="roadmap-empty-all" style="display:none;">
+                        <div class="roadmap-empty-icon"><i data-lucide="route"></i></div>
+                        <div class="roadmap-empty-title">还没有学习路径</div>
+                        <div class="roadmap-empty-desc">在聊天页面让 AI 为你推荐，或从知识图谱中手动创建</div>
+                        <div class="roadmap-empty-actions">
+                            <button class="btn btn-primary" onclick="location.href='chat.html'">前往对话</button>
+                            <button class="btn btn-secondary" onclick="switchTab(document.querySelectorAll('.tab-btn')[0], 'kg')">浏览知识图谱</button>
+                        </div>
+                    </div>
+                    <div id="roadmap-content" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- 创建路径对话框 -->
+            <div class="pathway-dialog-overlay" id="pathway-dialog-overlay" onclick="if(event.target===this)closePathwayDialog()">
+                <div class="pathway-dialog">
+                    <h3>新建学习路径</h3>
+                    <input type="text" class="form-input" id="pathway-dialog-name" placeholder="路径名称，如：Python 系统学习">
+                    <div class="dialog-actions">
+                        <button class="btn btn-secondary" onclick="closePathwayDialog()">取消</button>
+                        <button class="btn btn-primary" onclick="handleCreatePathwayFromDialog()">创建</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Study Plan Tab -->
+            <div id="tab-study-plan" style="display:none;">
+                <div class="sp-toolbar">
+                    <button class="btn btn-primary" onclick="window._showSpGenerateDialog()">生成学习计划</button>
+                    <span class="sp-toolbar-hint">基于学习路径和画像自动排程</span>
+                </div>
+                <div id="sp-content">
+                    <div class="roadmap-empty" id="sp-empty">
+                        <div class="roadmap-empty-icon"><i data-lucide="calendar"></i></div>
+                        <div class="roadmap-empty-title">还没有学习计划</div>
+                        <div class="roadmap-empty-desc">系统将根据你的学习路径和画像，自动生成按日期排程的个性化学习计划</div>
+                    </div>
+                    <div id="sp-list" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- 生成学习计划对话框 -->
+            <div class="sp-dialog-overlay" id="sp-dialog-overlay" onclick="if(event.target===this)window._closeSpGenerateDialog()">
+                <div class="sp-dialog">
+                    <h3>生成学习计划</h3>
+                    <div class="sp-dialog-row">
+                        <label>计划标题</label>
+                        <input type="text" class="form-input" id="sp-dialog-title" placeholder="可选，留空自动生成">
+                    </div>
+                    <div class="sp-dialog-row">
+                        <label>开始日期</label>
+                        <input type="date" class="form-input" id="sp-dialog-start">
+                    </div>
+                    <div class="sp-dialog-row">
+                        <label>目标天数</label>
+                        <input type="number" class="form-input" id="sp-dialog-days" placeholder="如 14" min="1" max="180">
+                    </div>
+                    <div class="sp-dialog-row">
+                        <label>每日时长</label>
+                        <input type="number" class="form-input" id="sp-dialog-daily" placeholder="分钟，如 60" min="10" max="720">
+                    </div>
+                    <div class="dialog-actions">
+                        <button class="btn btn-secondary" onclick="window._closeSpGenerateDialog()">取消</button>
+                        <button class="btn btn-primary" id="sp-dialog-generate-btn" onclick="window._handleSpGenerate()">开始生成</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    </div>
+    </div>
+
+    <!-- Slide-in Detail Panel (outside main layout) -->
+    <div class="kg-detail-backdrop" id="kg-detail-backdrop" onclick="window._closeDetailPanel()"></div>
+    <div class="kg-detail-panel" id="kg-detail-panel">
+        <button class="panel-close" onclick="window._closeDetailPanel()">✕</button>
+        <div style="text-align:center;color:var(--text-3);padding:40px 10px;font-size:13px;">
+            点击图中节点查看详情
+        </div>
+    </div>
+
+    </div>
+
+    <script type="module">
+        import { isLoggedIn, getUserId, clearAuth, getKgGraph, getPathways, createPathway, deletePathway, getLearningRecords, addPathwayItem, markPathwayItemDone, getDocuments, getResources, listStudyPlans, generateStudyPlan, deleteStudyPlan, updateStudyPlanItem, generateStudyPlanItemResources } from './assets/api.js';
+        import { showToast } from './assets/toast.js';
+        import { showDialog } from './assets/dialog.js';
+        import { registerPage, initSidebar } from './assets/nav.js';
+
+        if (!isLoggedIn()) {
+            window.location.href = 'auth.html';
+        }
+
+        const userId = getUserId();
+
+        // === Module-level state ===
+        let fullGraph = null;
+        let chartInstance = null;
+        let resizeHandler = null;
+        let learnedKpIds = new Set();
+        let lastFilteredNodes = [];
+        let lastFilteredEdges = [];
+
+        async function init() {
+            initSidebar('pathway');
+
+        // === KG 全屏模式 ===
+        function rerenderForceForResize() {
+            if (chartInstance && lastFilteredNodes.length) {
+                chartInstance.resize();
+                forceRender(lastFilteredNodes, lastFilteredEdges);
+            }
+        }
+        window.enterKgFullscreen = function() {
+            document.body.classList.add('kg-fullscreen');
+            // Wait for layout to settle before measuring new container size.
+            setTimeout(rerenderForceForResize, 50);
+        };
+        window.exitKgFullscreen = function() {
+            document.body.classList.remove('kg-fullscreen');
+            setTimeout(rerenderForceForResize, 50);
+        };
+
+
+
+
+
+        // === Legend toggle ===
+        window.toggleLegendType = function(el) {
+            if (!chartInstance) return;
+            const typeName = categoryNames[el.dataset.type] || el.dataset.type;
+            chartInstance.dispatchAction({ type: 'legendToggleSelect', name: typeName });
+            el.classList.toggle('active');
+        };
+
+        let pathways = [];
+
+        const nodeTypeSize = { 'Course': 90, 'Chapter': 55, 'KnowledgePoint': 30, 'SubPoint': 20, 'Concept': 10 };
+        const nodeTypeColor = { 'Course': '#D4852B', 'Chapter': '#5E9A82', 'KnowledgePoint': '#C59642', 'SubPoint': '#B65C6E', 'Concept': '#887AA5' };
+
+        // 提升颜色饱和度和亮度，用于已学习高亮
+        function boostColor(hex, satMul, lightMul) {
+            let r = parseInt(hex.slice(1,3),16)/255, g = parseInt(hex.slice(3,5),16)/255, b = parseInt(hex.slice(5,7),16)/255;
+            const max = Math.max(r,g,b), min = Math.min(r,g,b);
+            let h, s, l = (max+min)/2;
+            if (max === min) { h = s = 0; }
+            else {
+                const d = max - min;
+                s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+                if (max===r) h = ((g-b)/d + (g<b?6:0))/6;
+                else if (max===g) h = ((b-r)/d+2)/6;
+                else h = ((r-g)/d+4)/6;
+            }
+            s = Math.min(1, s * satMul);
+            l = Math.min(0.85, l * lightMul);
+            function hue2rgb(p,q,t){ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return p+(q-p)*6*t; if(t<1/2)return q; if(t<2/3)return p+(q-p)*(2/3-t)*6; return p; }
+            let ro,go,bo;
+            if (s===0) { ro=go=bo=l; }
+            else { const q=l<0.5?l*(1+s):l+s-l*s, p=2*l-q; ro=hue2rgb(p,q,h+1/3); go=hue2rgb(p,q,h); bo=hue2rgb(p,q,h-1/3); }
+            return `rgb(${Math.round(ro*255)},${Math.round(go*255)},${Math.round(bo*255)})`;
+        }
+        const nodeTypeShadow = {
+            'Course':          { shadowBlur: 40, shadowColor: 'rgba(212,133,43,0.42)', shadowOffsetY: 4 },
+            'Chapter':         { shadowBlur: 25, shadowColor: 'rgba(94,154,130,0.32)', shadowOffsetY: 3 },
+            'KnowledgePoint':  { shadowBlur: 15,  shadowColor: 'rgba(197,150,66,0.24)', shadowOffsetY: 2 },
+            'SubPoint':        { shadowBlur: 8,  shadowColor: 'rgba(182,92,110,0.16)', shadowOffsetY: 1 },
+            'Concept':         { shadowBlur: 4,  shadowColor: 'rgba(136,122,165,0.10)', shadowOffsetY: 0 },
+        };
+        const nodeTypeEdgeWidth = {
+            'Course': 7,
+            'Chapter': 4,
+            'KnowledgePoint': 2.0,
+            'SubPoint': 1.2,
+            'Concept': 0.5,
+        };
+
+        // Zoom-adaptive visibility
+        let currentZoom = 1;
+        let roamRafId = null;
+        const zoomThresholds = {
+            'Course': 0.0, // Always show
+            'Chapter': 0.08,
+            'KnowledgePoint': 0.18,
+            'SubPoint': 0.40,
+            'Concept': 0.65,
+        };
+        // type icons replaced by color dots, keep empty for backward compat
+        const nodeTypeIcon = { 'Course': '', 'Chapter': '', 'KnowledgePoint': '', 'SubPoint': '', 'Concept': '' };
+        const categoryList = ['Course', 'Chapter', 'KnowledgePoint', 'SubPoint', 'Concept'];
+        const categoryNames = { 'Course': '课程', 'Chapter': '章节', 'KnowledgePoint': '知识点', 'SubPoint': '子点', 'Concept': '概念' };
+
+        // === Tab switching ===
+        function switchTab(btn, tab) {
+            document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('tab-kg').style.display = tab === 'kg' ? 'block' : 'none';
+            document.getElementById('tab-pathways').style.display = tab === 'pathways' ? 'block' : 'none';
+            document.getElementById('tab-study-plan').style.display = tab === 'study-plan' ? 'block' : 'none';
+            if (tab === 'kg') loadKgGraph();
+            else if (tab === 'pathways') loadPathways();
+            else if (tab === 'study-plan') loadStudyPlans();
+        }
+
+        // === Step 2: Load document options ===
+        async function loadDocumentOptions() {
+            try {
+                const docs = await getDocuments(userId) || [];
+                const sel = document.getElementById('kg-doc-select');
+                sel.innerHTML = '<option value="">全部文档</option>' + docs.map(d => `<option value="${d.kp_id}">${d.title || d.kp_id}</option>`).join('');
+            } catch(e) { console.warn('loadDocumentOptions error:', e); }
+        }
+
+        // === Step 1: Load KG graph data ===
+        async function loadKgGraph() {
+            const depth = parseInt(document.getElementById('kg-depth').value);
+            const docId = document.getElementById('kg-doc-select').value;
+            const rootId = document.getElementById('kg-root-select').value;
+            const params = { depth };
+            if (docId) params.doc_id = docId;
+            if (rootId) params.root_id = rootId;
+
+            const graph = await getKgGraph(params);
+            const chartDiv = document.getElementById('kg-chart');
+            const placeholder = document.getElementById('kg-placeholder');
+            if (!graph || !graph.nodes || !graph.nodes.length) {
+                placeholder.style.display = 'flex';
+                chartDiv.style.display = 'none';
+                document.getElementById('node-grid').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3);">暂无知识图谱数据</div>';
+                return;
+            }
+            placeholder.style.display = 'none';
+            chartDiv.style.display = 'block';
+
+            fullGraph = graph;
+
+            // Clear search state on refresh
+            document.getElementById('kg-search').value = '';
+
+            // Populate root node selector with Course/Chapter nodes
+            const rootSel = document.getElementById('kg-root-select');
+            const rootNodes = graph.nodes.filter(n => n.type === 'Course' || n.type === 'Chapter');
+            rootSel.innerHTML = '<option value="">全部根节点</option>' + rootNodes.map(n => `<option value="${n.id}">${nodeTypeIcon[n.type] || ''} ${n.name}</option>`).join('');
+
+            // Load learned state if toggle is on
+            if (document.getElementById('kg-learned-toggle').checked) {
+                await loadLearnedState();
+            }
+
+            applyFilters();
+        }
+
+        // === Step 4: Load learned state ===
+        async function loadLearnedState() {
+            try {
+                const records = await getLearningRecords(userId, { limit: 500 }) || [];
+                learnedKpIds = new Set(records.filter(r => r.action === 'complete' || r.action === 'quiz').map(r => r.kp_id));
+            } catch(e) { console.warn('loadLearnedState error:', e); }
+        }
+
+        // === Step 1+3: Apply filters (type + search) ===
+        function applyFilters() {
+            if (!fullGraph) return;
+
+            // Type filtering
+            const query = (document.getElementById('kg-search').value || '').trim().toLowerCase();
+
+            let filteredNodes = fullGraph.nodes.filter(n => categoryList.includes(n.type || 'KnowledgePoint'));
+
+            // Search filter
+            if (query) {
+                const matchedIds = new Set();
+                filteredNodes.forEach(n => {
+                    if (n.name.toLowerCase().includes(query)) matchedIds.add(n.id);
+                });
+                const neighborIds = new Set(matchedIds);
+                (fullGraph.edges || []).forEach(e => {
+                    if (matchedIds.has(e.source_id)) neighborIds.add(e.target_id);
+                    if (matchedIds.has(e.target_id)) neighborIds.add(e.source_id);
+                });
+                filteredNodes = filteredNodes.filter(n => neighborIds.has(n.id));
+            }
+
+            // Filter edges to only include those between visible nodes
+            const visibleIds = new Set(filteredNodes.map(n => n.id));
+            const filteredEdges = (fullGraph.edges || []).filter(e => visibleIds.has(e.source_id) && visibleIds.has(e.target_id));
+
+            forceRender(filteredNodes, filteredEdges);
+            lastFilteredNodes = filteredNodes;
+            lastFilteredEdges = filteredEdges;
+            renderNodeGrid(filteredNodes);
+            updateLearnedProgress(filteredNodes);
+        }
+
+        // === Step 4: Update learned progress bar ===
+        function updateLearnedProgress(nodes) {
+            const bar = document.getElementById('kg-learned-progress');
+            const isLearned = document.getElementById('kg-learned-toggle').checked;
+            if (!isLearned) { bar.style.display = 'none'; return; }
+            bar.style.display = 'flex';
+            const kpNodes = nodes;
+            const learned = kpNodes.filter(n => learnedKpIds.has(n.id)).length;
+            const total = kpNodes.length;
+            const pct = total ? Math.round(learned / total * 100) : 0;
+            document.getElementById('kg-learned-text').textContent = `已学习 ${learned} / ${total} (${pct}%)`;
+            document.getElementById('kg-learned-fill').style.width = `${pct}%`;
+        }
+
+        // === Search: focus on node with camera animation ===
+        function performSearch() {
+            if (!chartInstance || !fullGraph) return;
+            const query = (document.getElementById('kg-search').value || '').trim().toLowerCase();
+
+            if (!query) {
+                forceClearSearch();
+                return;
+            }
+
+            const matched = fullGraph.nodes.filter(n => n.name.toLowerCase().includes(query));
+            if (!matched.length) {
+                showToast('未找到匹配的知识点', 'warning');
+                return;
+            }
+
+            showDetailPanel(matched[0]);
+            forceHighlightSearchResults(matched.map(n => n.id));
+            forceFocusOnNode(matched[0].id);
+        }
+
+        // Force mode: clear search
+        function forceClearSearch() {
+            forceClearSearchHighlight();
+            chartInstance.setOption({ series: [{ center: null, zoom: 1 }] });
+            currentZoom = 1;
+            forceUpdateVisibilityByZoom(currentZoom);
+        }
+
+        function forceHighlightSearchResults(matchedIds) {
+            const matchedSet = new Set(matchedIds);
+            const option = chartInstance.getOption();
+            const nodes = option.series[0].data;
+            const links = option.series[0].links || [];
+
+            const isLightBg = document.getElementById('kg-bg-toggle').checked;
+            const dimLabelColor = isLightBg ? 'rgba(30,25,20,0.3)' : 'rgba(255,255,255,0.3)';
+
+            const updated = nodes.map(n => {
+                if (matchedSet.has(n.id)) {
+                    return {
+                        ...n,
+                        _searchHighlight: true,
+                        symbolSize: (n._baseSize || n.symbolSize) * 1.4,
+                        itemStyle: {
+                            ...n.itemStyle,
+                            borderColor: '#D4A65A',
+                            borderWidth: 4,
+                            shadowBlur: 20,
+                            shadowColor: 'rgba(212,166,90,0.55)',
+                        },
+                        label: { ...n.label, show: true, color: '#D4A65A', fontWeight: 'bold' }
+                    };
+                }
+                return {
+                    ...n,
+                    _searchHighlight: false,
+                    label: { ...n.label, color: dimLabelColor }
+                };
+            });
+
+            const updatedLinks = links.map(link => {
+                const srcId = typeof link.source === 'object' ? link.source.id : link.source;
+                const tgtId = typeof link.target === 'object' ? link.target.id : link.target;
+                const isMatchEdge = matchedSet.has(srcId) || matchedSet.has(tgtId);
+                return {
+                    ...link,
+                    lineStyle: {
+                        ...(link.lineStyle || {}),
+                        opacity: isMatchEdge ? 0.7 : 0.15,
+                        width: isMatchEdge ? 2 : (link.lineStyle && link.lineStyle.width || 1.2),
+                    },
+                };
+            });
+
+            chartInstance.setOption({ series: [{ data: updated, links: updatedLinks }] });
+        }
+
+        function forceClearSearchHighlight() {
+            const option = chartInstance.getOption();
+            if (!option.series || !option.series[0]) return;
+            const nodes = option.series[0].data;
+            const links = option.series[0].links || [];
+            const hasHighlight = nodes.some(n => n._searchHighlight != null);
+            if (!hasHighlight) return;
+
+            const restoreColor = document.getElementById('kg-bg-toggle').checked ? 'rgba(30,25,20,0.85)' : 'rgba(255,255,255,0.85)';
+            const updated = nodes.map(n => ({
+                ...n,
+                _searchHighlight: undefined,
+                symbolSize: n._baseSize || n.symbolSize,
+                itemStyle: {
+                    ...n.itemStyle,
+                    borderColor: undefined,
+                    borderWidth: undefined,
+                    shadowBlur: undefined,
+                    shadowColor: undefined,
+                    opacity: n._baseOpacity != null ? n._baseOpacity : 1,
+                },
+                label: { ...n.label, color: restoreColor, fontWeight: undefined }
+            }));
+
+            const updatedLinks = links.map(link => ({
+                ...link,
+                lineStyle: {
+                    ...(link.lineStyle || {}),
+                    opacity: 0.6,
+                },
+            }));
+
+            chartInstance.setOption({ series: [{ data: updated, links: updatedLinks }] });
+            chartInstance.dispatchAction({ type: 'downplay', seriesIndex: 0 });
+        }
+
+        function focusOnNode(nodeId) {
+            if (!chartInstance) return;
+            forceFocusOnNode(nodeId);
+        }
+
+        // Force mode: camera animation + highlight
+        function forceFocusOnNode(nodeId) {
+            const model = chartInstance.getModel();
+            const series = model.getSeriesByIndex(0);
+            if (!series) return;
+            const data = series.getData();
+
+            let targetIdx = -1;
+            for (let i = 0; i < data.count(); i++) {
+                if (data.getId(i) === nodeId || data.getName(i) === nodeId) {
+                    targetIdx = i;
+                    break;
+                }
+            }
+            if (targetIdx < 0) return;
+
+            const layout = data.getItemLayout(targetIdx);
+            if (!layout) return;
+
+            const targetZoom = 1.8;
+            chartInstance.dispatchAction({ type: 'downplay', seriesIndex: 0 });
+            chartInstance.setOption({
+                series: [{ center: [layout[0], layout[1]], zoom: targetZoom }]
+            });
+            currentZoom = targetZoom;
+            forceUpdateVisibilityByZoom(currentZoom);
+            chartInstance.dispatchAction({ type: 'highlight', seriesIndex: 0, dataIndex: targetIdx });
+            chartInstance.dispatchAction({ type: 'showTip', seriesIndex: 0, dataIndex: targetIdx });
+        }
+
+        // === Zoom-adaptive visibility (force mode only) ===
+        function forceUpdateVisibilityByZoom(zoom) {
+            if (!chartInstance) return;
+            const option = chartInstance.getOption();
+            if (!option.series || !option.series[0] || !option.series[0].data) return;
+            const nodes = option.series[0].data;
+            const links = option.series[0].links || [];
+
+            // Build a set of hidden node IDs
+            const hiddenIds = new Set();
+            const updated = nodes.map(n => {
+                const threshold = zoomThresholds[n.node_type] != null ? zoomThresholds[n.node_type] : 0.6;
+                const visible = zoom >= threshold;
+                const baseSize = n._baseSize || n.symbolSize;
+                const baseOpacity = n._baseOpacity != null ? n._baseOpacity : ((n.itemStyle && n.itemStyle.opacity) || 1);
+                // 已学习节点：保留大小缩放但比普通节点稍大，不弱化透明度和标签
+                if (n._learned) {
+                    const sz = visible ? baseSize : baseSize * 0.85;
+                    if (!visible) hiddenIds.add(n.id);
+                    return {
+                        ...n,
+                        symbolSize: sz,
+                        label: { ...n.label, show: true },
+                    };
+                }
+                if (!visible) hiddenIds.add(n.id);
+                return {
+                    ...n,
+                    _baseSize: baseSize,
+                    _baseOpacity: baseOpacity,
+                    label: { ...n.label, show: visible },
+                    itemStyle: {
+                        ...n.itemStyle,
+                        opacity: visible ? baseOpacity : (0.2 + threshold * 0.15),
+                    },
+                    symbolSize: visible ? baseSize : baseSize * 0.7,
+                };
+            });
+
+            // Hide edges connected to hidden nodes
+            const updatedLinks = links.map(link => {
+                const srcHidden = hiddenIds.has(link.source);
+                const tgtHidden = hiddenIds.has(link.target);
+                return {
+                    ...link,
+                    lineStyle: {
+                        ...(link.lineStyle || {}),
+                        opacity: (srcHidden || tgtHidden) ? 0 : 0.6,
+                    },
+                };
+            });
+
+            chartInstance.setOption({ series: [{ data: updated, links: updatedLinks }] });
+        }
+
+        // === Chart init helper ===
+        function initChartInstance(chartDiv) {
+            if (chartInstance) {
+                chartInstance.off('click');
+                chartInstance.off('graphRoam');
+            } else {
+                chartInstance = echarts.init(chartDiv);
+                let resizeDebounce;
+                resizeHandler = () => {
+                    if (!chartInstance) return;
+                    chartInstance.resize();
+                    clearTimeout(resizeDebounce);
+                    resizeDebounce = setTimeout(() => {
+                        if (lastFilteredNodes.length) {
+                            forceRender(lastFilteredNodes, lastFilteredEdges);
+                        }
+                    }, 200);
+                };
+                window.addEventListener('resize', resizeHandler);
+            }
+        }
+
+        // === Force-directed view render ===
+        function forceRender(nodes, edges) {
+            currentZoom = 1;
+            // Force mode: all legend chips active
+            document.querySelectorAll('.kg-legend-chip').forEach(c => c.classList.add('active'));
+
+            const chartDiv = document.getElementById('kg-chart');
+            initChartInstance(chartDiv);
+
+            chartInstance.on('click', forceHandleNodeClick);
+            chartInstance.on('graphRoam', function(params) {
+                if (params.zoom) {
+                    currentZoom *= params.zoom;
+                    if (roamRafId) cancelAnimationFrame(roamRafId);
+                    roamRafId = requestAnimationFrame(() => {
+                        roamRafId = null;
+                        forceUpdateVisibilityByZoom(currentZoom);
+                    });
+                }
+            });
+
+            // Step 6: Pathway overlay
+            const overlayPathId = document.getElementById('kg-pathway-overlay').value;
+            let pathItemMap = {};
+            if (overlayPathId && pathways.length) {
+                const path = pathways.find(p => p.id === overlayPathId);
+                if (path && path.items) {
+                    const completedCount = path.items.filter(i => i.is_completed).length;
+                    path.items.forEach((item, idx) => {
+                        const status = item.is_completed ? 'completed' : (idx === completedCount ? 'current' : 'planned');
+                        pathItemMap[item.kp_id] = status;
+                    });
+                }
+            }
+
+            const categories = categoryList.map(c => ({ name: categoryNames[c] }));
+            const isLearnedMode = document.getElementById('kg-learned-toggle').checked;
+            const isLightBg = document.getElementById('kg-bg-toggle').checked;
+            const labelColor = isLightBg ? 'rgba(30,25,20,0.85)' : 'rgba(255,255,255,0.85)';
+            const dimLabelColor = isLightBg ? 'rgba(30,25,20,0.15)' : 'rgba(255,255,255,0.15)';
+
+            // Random initial positions within a moderate spread near center
+            const cx = chartDiv.clientWidth / 2 || 350;
+            const cy = chartDiv.clientHeight / 2 || 350;
+            const initSpread = Math.min(cx, cy) * 0.35;
+
+            const chartNodes = nodes.map(n => {
+                const nType = n.type || 'KnowledgePoint';
+                const baseSize = nodeTypeSize[nType] || 35;
+                const angle = Math.random() * 2 * Math.PI;
+                const r = Math.random() * initSpread;
+
+                const node = {
+                    name: n.name,
+                    id: n.id,
+                    node_type: nType,
+                    extra: n.extra || {},
+                    category: categoryList.indexOf(nType),
+                    symbolSize: baseSize,
+                    _baseSize: baseSize,
+                    _baseOpacity: 1,
+                    x: cx + Math.cos(angle) * r,
+                    y: cy + Math.sin(angle) * r,
+                    itemStyle: {
+                        color: nodeTypeColor[nType] || '#D4956A',
+                        ...(nodeTypeShadow[nType] || {}),
+                    },
+                };
+                if (isLearnedMode && learnedKpIds.has(n.id)) {
+                    const baseColor = nodeTypeColor[nType] || '#D4956A';
+                    const bright = boostColor(baseColor, 1.4, 1.3);
+                    node.itemStyle.color = bright;
+                    node.itemStyle.borderColor = bright;
+                    node.itemStyle.borderWidth = 3;
+                    node.itemStyle.shadowBlur = 20;
+                    node.itemStyle.shadowColor = bright;
+                    node.symbolSize = Math.max(baseSize, 40);
+                    node._baseSize = Math.max(baseSize, 40);
+                    node._baseOpacity = 1;
+                    node._learned = true;
+                } else if (isLearnedMode && !learnedKpIds.has(n.id)) {
+                    node.itemStyle.opacity = 0.15;
+                    node._baseOpacity = 0.15;
+                    node.label = { show: true, color: dimLabelColor };
+                }
+                if (overlayPathId && pathItemMap[n.id]) {
+                    const st = pathItemMap[n.id];
+                    if (st === 'completed') { node.itemStyle.borderColor = '#6E9466'; node.itemStyle.borderWidth = 3; }
+                    else if (st === 'current') { node.itemStyle.borderColor = '#C98A2E'; node.itemStyle.borderWidth = 3; node.symbolSize = baseSize * 1.3; node._baseSize = baseSize * 1.3; }
+                    else if (st === 'planned') { node.itemStyle.borderColor = '#C77B3C'; node.itemStyle.borderWidth = 2; }
+                } else if (overlayPathId && Object.keys(pathItemMap).length > 0 && !pathItemMap[n.id]) {
+                    node.itemStyle.opacity = 0.4;
+                    node._baseOpacity = 0.4;
+                }
+                return node;
+            });
+
+            // All edges participate in force, keep same-type to a shorter length
+            const nodeTypeById = {};
+            nodes.forEach(n => { nodeTypeById[n.id] = n.type || 'KnowledgePoint'; });
+            const chartEdges = edges.map(e => {
+                const st = nodeTypeById[e.source_id] || 'KnowledgePoint';
+                const tt = nodeTypeById[e.target_id] || 'KnowledgePoint';
+                const sameType = st === tt;
+                return {
+                    source: e.source_id,
+                    target: e.target_id,
+                    relation: e.relation,
+                    edgeLength: sameType ? 60 : 100,
+                    lineStyle: {
+                        width: sameType ? 0.5 : (nodeTypeEdgeWidth[st] || 1.2) * 0.45,
+                        opacity: sameType ? 0.08 : 0.18,
+                        color: 'rgba(175,160,140,0.5)',
+                    },
+                };
+            });
+
+            const nCount = nodes.length;
+            // Force params for tight clusters: low repulsion, moderate gravity
+            let repulsion, gravity;
+            if (nCount < 50)      { repulsion = 150; gravity = 0.12; }
+            else if (nCount < 150) { repulsion = 240; gravity = 0.08; }
+            else if (nCount < 300) { repulsion = 350; gravity = 0.05; }
+            else                  { repulsion = 500; gravity = 0.03; }
+
+            const seriesBase = {
+                type: 'graph', roam: true, draggable: true,
+                categories: categories,
+                label: { show: true, fontSize: 11, position: 'bottom', formatter: '{b}', color: labelColor },
+                emphasis: {
+                    focus: 'adjacency',
+                    itemStyle: { borderWidth: 3, borderColor: 'rgba(255,255,255,0.8)' },
+                    scale: true,
+                    symbolSize: (params) => {
+                        const base = params.data._baseSize || params.data.symbolSize || 20;
+                        const nType = params.data.node_type || '';
+                        if (nType === 'Concept') return base * 4;
+                        if (nType === 'SubPoint') return base * 2.5;
+                        return base * 1.5;
+                    },
+                },
+            };
+
+            // Phase 1: Force with edges, let force form natural cluster groups
+            chartInstance.setOption({
+                backgroundColor: 'transparent',
+                animationDurationUpdate: 300,
+                tooltip: {
+                    trigger: 'item',
+                    formatter: params => {
+                        const t = params.data.node_type || '';
+                        return `<b>${params.data.name}</b><br/><span style="font-size:12px;color:var(--text-3)">${categoryNames[t] || t}</span>`;
+                    }
+                },
+                legend: { show: false, data: categories.map(c => c.name), selected: Object.fromEntries(categories.map(c => [c.name, true])) },
+                series: [{
+                    ...seriesBase,
+                    layout: 'force',
+                    force: { repulsion, gravity, edgeLength: [40, 120], layoutAnimation: true, friction: 0.75 },
+                    data: chartNodes,
+                    links: chartEdges,
+                }]
+            }, true);
+
+            forceUpdateVisibilityByZoom(currentZoom);
+        }
+
+        // === Render node grid: 分组数据表 ===
+        const nodeTypeOrder = ['Course', 'Chapter', 'KnowledgePoint', 'SubPoint', 'Concept'];
+        let collapsedSections = {}; // 记录折叠状态
+
+        function renderNodeGrid(nodes) {
+            const grid = document.getElementById('node-grid');
+            const countEl = document.getElementById('kg-node-count');
+
+            if (!nodes || !nodes.length) {
+                grid.innerHTML = '<div class="kg-node-list-empty">当前筛选条件下无知识点</div>';
+                if (countEl) countEl.textContent = '';
+                return;
+            }
+            if (countEl) countEl.textContent = `(${nodes.length} 个)`;
+
+            // 按类型分组
+            const groups = {};
+            nodeTypeOrder.forEach(t => { groups[t] = []; });
+            nodes.forEach(n => {
+                const t = n.type || 'KnowledgePoint';
+                if (!groups[t]) groups[t] = [];
+                groups[t].push(n);
+            });
+
+            // 排序选项
+            const sortMode = document.getElementById('kg-node-sort')?.value || 'name';
+
+            let html = '';
+            // 工具栏
+            html += `<div class="kg-node-list-toolbar">
+                <span>共 ${nodes.length} 个节点，${Object.values(groups).filter(g => g.length).length} 个类型</span>
+                <select class="kg-node-list-sort" id="kg-node-sort" onchange="window._resortNodeGrid()">
+                    <option value="name" ${sortMode==='name'?'selected':''}>按名称</option>
+                    <option value="learned" ${sortMode==='learned'?'selected':''}>已学习优先</option>
+                </select>
+            </div>`;
+
+            nodeTypeOrder.forEach(t => {
+                const groupNodes = groups[t];
+                if (!groupNodes || !groupNodes.length) return;
+
+                // 排序
+                if (sortMode === 'learned') {
+                    groupNodes.sort((a, b) => (learnedKpIds.has(b.id) ? 1 : 0) - (learnedKpIds.has(a.id) ? 1 : 0));
+                } else {
+                    groupNodes.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'zh'));
+                }
+
+                const isCollapsed = collapsedSections[t] || false;
+                html += `<div class="kg-node-section${isCollapsed ? ' collapsed' : ''}" data-type="${t}">`;
+                html += `<div class="kg-node-section-header" onclick="window._toggleKgSection('${t}')">`;
+                html += `<div class="kg-node-section-dot" style="background:${nodeTypeColor[t]}"></div>`;
+                html += `<span class="kg-node-section-label">${categoryNames[t] || t}</span>`;
+                html += `<span class="kg-node-section-count">${groupNodes.length} 个</span>`;
+                html += `<div class="kg-node-section-arrow"><i data-lucide="chevron-down" style="width:16px;height:16px;"></i></div>`;
+                html += `</div>`;
+                html += `<div class="kg-node-rows">`;
+                groupNodes.forEach(n => {
+                    const isLearned = learnedKpIds.has(n.id);
+                    const rowClass = isLearned ? 'learned' : '';
+                    html += `<div class="kg-node-row ${rowClass}" onclick="window._handleNodeGridClick('${n.id}')">`;
+                    // 学习状态图标
+                    html += `<div class="kg-node-row-indicator">`;
+                    if (isLearned) {
+                        html += `<i data-lucide="check-circle" style="width:16px;height:16px;color:var(--success);"></i>`;
+                    } else {
+                        html += `<div class="kg-node-row-dot" style="background:${nodeTypeColor[t]}"></div>`;
+                    }
+                    html += `</div>`;
+                    html += `<span class="kg-node-row-name">${n.name}</span>`;
+                    html += `<span class="kg-node-row-meta">${n.id && n.id.length > 12 ? n.id.slice(0,12)+'...' : (n.id || '')}</span>`;
+                    html += `<div class="kg-node-row-actions">`;
+                    html += `<button class="kg-node-row-btn" title="在图谱中定位" onclick="event.stopPropagation();focusOnNode('${n.id}')"><i data-lucide="crosshair" style="width:14px;height:14px;"></i></button>`;
+                    html += `</div>`;
+                    html += `</div>`;
+                });
+                html += `</div></div>`;
+            });
+
+            grid.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        window._toggleKgSection = function(type) {
+            // 直接操作 DOM 实现平滑折叠，不重新渲染
+            const section = document.querySelector(`.kg-node-section[data-type="${type}"]`);
+            if (!section) return;
+            collapsedSections[type] = !collapsedSections[type];
+            section.classList.toggle('collapsed', collapsedSections[type]);
+        };
+
+        window._resortNodeGrid = function() {
+            renderNodeGrid(lastFilteredNodes);
+        };
+
+
+        // === Step 5: Node click → detail panel ===
+        async function forceHandleNodeClick(params) {
+            if (params.dataType === 'edge') return;
+            const nodeData = params.data;
+            const nodeId = nodeData.id;
+            const node = fullGraph.nodes.find(n => n.id === nodeId);
+            if (!node) return;
+            showDetailPanel(node);
+        }
+
+        window._handleNodeGridClick = function(nodeId) {
+            const node = fullGraph && fullGraph.nodes.find(n => n.id === nodeId);
+            if (node) showDetailPanel(node);
+        };
+
+        async function showDetailPanel(node) {
+            const panel = document.getElementById('kg-detail-panel');
+            const backdrop = document.getElementById('kg-detail-backdrop');
+            const nType = node.type || 'KnowledgePoint';
+            const extra = node.extra || {};
+
+            // Find relations from edges
+            const relations = (fullGraph.edges || []).filter(e => e.source_id === node.id || e.target_id === node.id).map(e => {
+                const isSource = e.source_id === node.id;
+                const otherId = isSource ? e.target_id : e.source_id;
+                const otherNode = fullGraph.nodes.find(n => n.id === otherId);
+                return { direction: isSource ? '→' : '←', relation: e.relation || '关联', otherName: otherNode ? otherNode.name : otherId, otherNode };
+            });
+
+            let html = `
+                <h3>${node.name}</h3>
+                <span class="detail-type">${categoryNames[nType] || nType}</span>
+                <div class="detail-id">ID: ${node.id}</div>
+                ${extra.description ? `<div class="detail-desc">${extra.description}</div>` : ''}
+            `;
+
+            // Build grouped relation list (Plan A)
+            if (relations.length) {
+                html += `<div class="detail-section">关联关系 (${relations.length})</div>`;
+
+                const relLabel = { 'IS_PART_OF': '属于', 'CONTAINS': '包含', 'REQUIRES': '依赖', 'RELATED_TO': '相关' };
+                const relColor = { 'IS_PART_OF': '#6E9466', 'CONTAINS': '#5B8DB8', 'REQUIRES': '#C98A2E', 'RELATED_TO': '#908A80' };
+                const typeOrder = { 'Course': 0, 'Chapter': 1, 'KnowledgePoint': 2, 'SubPoint': 3, 'Concept': 4 };
+                const relPriority = { 'IS_PART_OF': 0, 'CONTAINS': 1, 'REQUIRES': 2, 'RELATED_TO': 3 };
+
+                // Group by relation type
+                const groups = {};
+                relations.forEach(r => {
+                    const key = r.relation;
+                    if (!groups[key]) groups[key] = [];
+                    groups[key].push(r);
+                });
+
+                // Sort each group by otherNode type order then name
+                Object.values(groups).forEach(g => {
+                    g.sort((a, b) => {
+                        const ta = typeOrder[a.otherNode?.type] ?? 99;
+                        const tb = typeOrder[b.otherNode?.type] ?? 99;
+                        if (ta !== tb) return ta - tb;
+                        return (a.otherName || '').localeCompare(b.otherName || '');
+                    });
+                });
+
+                // Sort group keys by relation priority
+                const sortedKeys = Object.keys(groups).sort((a, b) => (relPriority[a] ?? 99) - (relPriority[b] ?? 99));
+
+                const maxVisible = 5;
+                sortedKeys.forEach((key, gi) => {
+                    const items = groups[key];
+                    const label = relLabel[key] || key;
+                    const dotColor = relColor[key] || '#908A80';
+                    const overflow = items.length > maxVisible;
+                    const groupId = `rel-group-${gi}`;
+
+                    html += `<details class="rel-group" open><summary><span class="rel-dot" style="background:${dotColor}"></span>${label} (${items.length})</summary>`;
+
+                    items.forEach((r, i) => {
+                        const oType = r.otherNode?.type || 'KnowledgePoint';
+                        const oName = r.otherName || '?';
+                        const oId = r.otherNode?.id || '';
+                        const typeDotColor = nodeTypeColor[oType] || '#887AA5';
+                        const hidden = overflow && i >= maxVisible ? `style="display:none" class="rel-item rel-overflow-${groupId}"` : 'class="rel-item"';
+                        html += `<div ${hidden} onclick="window._navigateToNode('${oId}')">
+                            <span class="rel-type-dot" style="background:${typeDotColor}"></span>
+                            <span class="rel-name" title="${oName}">${oName}</span>
+                            <span class="rel-tag">${categoryNames[oType] || oType}</span>
+                            <span class="rel-arrow" title="${r.direction === '→' ? '本节点→对方' : '对方→本节点'}">${r.direction}</span>
+                        </div>`;
+                    });
+
+                    if (overflow) {
+                        html += `<div class="rel-more" onclick="const els=this.parentElement.querySelectorAll('.rel-overflow-${groupId}');const show=els[0].style.display==='none';els.forEach(e=>e.style.display=show?'flex':'');this.textContent=show?'收起':'展开剩余 ${items.length - maxVisible} 项';">展开剩余 ${items.length - maxVisible} 项</div>`;
+                    }
+
+                    html += `</details>`;
+                });
+            }
+
+            html += `<hr style="margin:12px 0;border:none;border-top:1px solid var(--divider);">`;
+            html += `<div class="detail-section">关联资源</div><div id="detail-resources"><span style="font-size:12px;color:var(--text-3);">加载中...</span></div>`;
+            window._kgDetailNode = node;
+            html += `<div class="detail-actions">
+                <button class="btn btn-primary" onclick="window._generateForCurrentKp()">生成学习资源</button>
+                <button class="btn btn-secondary" onclick="window._showAddToCurrentPathway()">加入学习路径</button>
+            </div>`;
+            html += `<div id="detail-pathway-list" style="display:none;margin-top:8px;"></div>`;
+
+            panel.innerHTML = `<button class="panel-close" onclick="window._closeDetailPanel()">✕</button>` + html;
+            panel.classList.add('open');
+            backdrop.classList.add('open');
+
+            // Load resources for this node
+            try {
+                const resources = await getResources(userId, { kp_id: node.id }) || [];
+                const resDiv = document.getElementById('detail-resources');
+                if (!resources.length) {
+                    resDiv.innerHTML = '<span style="font-size:12px;color:var(--text-3);">暂无关联资源</span>';
+                } else {
+                    const resIcons = { quiz: 'file-question', mindmap: 'git-branch', code: 'terminal', doc: 'file-text', summary: 'layout-list', animation: 'play-circle' };
+                    resDiv.innerHTML = resources.map(r => {
+                        const iconName = resIcons[r.resource_type] || 'file-text';
+                        const action = r.resource_type === 'quiz' ? `onclick="location.href='evaluate.html?resource_id=${r.id}'"` : `onclick="location.href='library.html?preview=${r.id}'"`;
+                        return `<div class="resource-item" ${action}><span><i data-lucide="${iconName}" style="width:16px;height:16px;"></i></span><span style="flex:1;">${r.title || '未命名'}</span><span style="color:var(--accent);font-size:11px;">查看</span></div>`;
+                    }).join('');
+                    lucide.createIcons();
+                }
+            } catch(e) { console.warn('load resources error:', e); }
+        }
+
+        // Navigate to related node from sidebar
+        window._navigateToNode = function(nodeId) {
+            const otherNode = fullGraph && fullGraph.nodes.find(n => n.id === nodeId);
+            if (otherNode) showDetailPanel(otherNode);
+        };
+
+        // === Close detail panel ===
+        window._closeDetailPanel = function() {
+            document.getElementById('kg-detail-panel').classList.remove('open');
+            document.getElementById('kg-detail-backdrop').classList.remove('open');
+        };
+
+        // === Step 7: Generate / Add to pathway (from detail node) ===
+        window._generateForCurrentKp = function() {
+            const n = window._kgDetailNode;
+            if (!n) return;
+            location.href = `generate.html?kp=${encodeURIComponent(n.id)}&kp_name=${encodeURIComponent(n.name)}`;
+        };
+        window._showAddToCurrentPathway = function() {
+            const n = window._kgDetailNode;
+            if (!n) return;
+            window._showAddToPathway(n.id, n.name);
+        };
+        // Keep old signatures for backward compat (used by learning path expand links)
+        window._generateForKp = function(kpId, kpName) {
+            location.href = `generate.html?kp=${encodeURIComponent(kpId)}&kp_name=${encodeURIComponent(kpName)}`;
+        };
+
+        window._showAddToPathway = function(kpId, kpName) {
+            const listDiv = document.getElementById('detail-pathway-list');
+            if (listDiv.style.display !== 'none') { listDiv.style.display = 'none'; return; }
+            if (!pathways.length) {
+                listDiv.innerHTML = '<div style="font-size:12px;color:var(--text-3);padding:8px;">暂无学习路径，请先创建</div>';
+                listDiv.style.display = 'block';
+                return;
+            }
+            listDiv.innerHTML = `<div class="pathway-select-list">${pathways.map(p => `<div class="pathway-select-item" onclick="window._addToPathway('${p.id}', '${kpId}', '${kpName}')">${p.name || '未命名路径'} (${(p.items||[]).length}项)</div>`).join('')}</div>`;
+            listDiv.style.display = 'block';
+        };
+
+        window._addToPathway = async function(pathId, kpId, kpName) {
+            const path = pathways.find(p => p.id === pathId);
+            const nextOrder = path && path.items ? path.items.length : 0;
+            try {
+                await addPathwayItem(pathId, userId, kpId, nextOrder);
+                showToast(`已将「${kpName}」加入学习路径`, 'success');
+                document.getElementById('detail-pathway-list').style.display = 'none';
+                // Refresh cached pathways
+                pathways = await getPathways(userId) || [];
+                _normalizePathwayIds(pathways);
+                populatePathwayOverlay();
+            } catch(e) { showToast('添加失败: ' + (e.message || e), 'error'); }
+        };
+
+        // ============================================================
+        // === 我的路径 Tab（改版：路线图视图）===
+        // ============================================================
+        let activePathId = null;       // 当前选中的路径 ID
+        let activePathData = null;     // 当前路径完整数据（含 items）
+        let expandedStepEl = null;     // 当前展开的步骤行
+
+        // 资源缓存：key=kp_id, value=该kp下的资源列表
+        let kpResourcesCache = {};
+
+        // === 路径 Tab 切换 ===
+        function selectPathway(pathId) {
+            activePathId = String(pathId);
+            activePathData = pathways.find(p => String(p.id) === String(pathId));
+            expandedStepEl = null;
+            renderPathwayTabs();
+            renderRoadmap();
+        }
+
+        // === 顶部路径切换器 ===
+        function renderPathwayTabs() {
+            const container = document.getElementById('pathway-tabs');
+            const MAX_VISIBLE = 5;
+            let html = '';
+            if (pathways.length <= MAX_VISIBLE) {
+                pathways.forEach(p => {
+                    const activeClass = String(activePathId) === String(p.id) ? ' active' : '';
+                    html += `<button class="tab-btn${activeClass}" onclick="selectPathway('${p.id}')">${escapeHtml(p.name || '未命名路径')}</button>`;
+                });
+            } else {
+                // 前4个直接展示，其余折叠
+                for (let i = 0; i < 4; i++) {
+                    const p = pathways[i];
+                    const activeClass = String(activePathId) === String(p.id) ? ' active' : '';
+                    html += `<button class="tab-btn${activeClass}" onclick="selectPathway('${p.id}')">${escapeHtml(p.name || '未命名路径')}</button>`;
+                }
+                // 更多菜单
+                html += `<div class="pathway-tab-more"><button class="tab-btn" onclick="toggleMorePathways(event)">更多 (${pathways.length - 4})</button><div class="pathway-tab-more-menu" id="pathway-more-menu">`;
+                for (let i = 4; i < pathways.length; i++) {
+                    const p = pathways[i];
+                    html += `<button class="pathway-tab-sub" onclick="selectPathway('${p.id}');document.getElementById('pathway-more-menu').style.display='none'">${escapeHtml(p.name || '未命名路径')}</button>`;
+                }
+                html += `</div></div>`;
+            }
+            html += `<button class="pathway-tab-add" onclick="openPathwayDialog()">+ 新建路径</button>`;
+            container.innerHTML = html;
+        }
+
+        function toggleMorePathways(e) {
+            e.stopPropagation();
+            const menu = document.getElementById('pathway-more-menu');
+            if (menu) menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        }
+        document.addEventListener('click', () => {
+            const menu = document.getElementById('pathway-more-menu');
+            if (menu) menu.style.display = 'none';
+        });
+
+        // === 路线图渲染 ===
+        function renderRoadmap() {
+            const emptyAll = document.getElementById('roadmap-empty-all');
+            const content = document.getElementById('roadmap-content');
+
+            if (!pathways.length) {
+                emptyAll.style.display = 'block';
+                content.style.display = 'none';
+                return;
+            }
+            emptyAll.style.display = 'none';
+
+            if (!activePathData) {
+                // 自动选择第一条
+                activePathId = pathways[0].id;
+                activePathData = pathways[0];
+                renderPathwayTabs();
+            }
+
+            const p = activePathData;
+            if (!p) { content.style.display = 'none'; return; }
+
+            const items = p.items || [];
+            const completed = items.filter(i => i.is_completed).length;
+            const pct = items.length ? Math.round(completed / items.length * 100) : 0;
+
+            let html = '';
+
+            if (!items.length) {
+                // 有路径但无知识点
+                html += `<div class="roadmap-card"><div class="roadmap-empty"><div class="roadmap-empty-icon"><i data-lucide="book-open"></i></div><div class="roadmap-empty-title">${escapeHtml(p.name || '未命名路径')}</div><div class="roadmap-empty-desc">路径中还没有知识点<br>前往知识图谱，点击节点选择"加入学习路径"</div><div class="roadmap-empty-actions"><button class="btn btn-primary" onclick="switchTab(document.querySelectorAll('.tab-btn')[0], 'kg')">前往知识图谱</button></div></div></div>`;
+            } else {
+                html += `<div class="roadmap-card">`;
+                // Header
+                html += `<div class="roadmap-header"><div><div class="roadmap-title">${escapeHtml(p.name || '未命名路径')}</div><div class="roadmap-meta">${items.length} 个知识点 · ${completed}/${items.length} 完成 (${pct}%) · ${p.created_at ? new Date(p.created_at).toLocaleDateString('zh-CN') : ''}</div></div><div class="roadmap-actions-header"><button class="btn-delete" onclick="handleDeletePathway('${p.id}')">删除路径</button></div></div>`;
+
+                // 进度尺
+                html += renderProgressStepper(items, completed);
+
+                // 步骤列表
+                html += `<div class="roadmap-steps" id="roadmap-steps">`;
+                items.forEach((item, idx) => {
+                    const isCompleted = item.is_completed;
+                    const isCurrent = !isCompleted && idx === completed;
+                    let rowClass, indicatorClass, indicatorContent;
+                    if (isCompleted) {
+                        rowClass = 'completed';
+                        indicatorClass = 'done';
+                        indicatorContent = `<i data-lucide="check" style="width:16px;height:16px;"></i>`;
+                    } else if (isCurrent) {
+                        rowClass = 'in-progress';
+                        indicatorClass = 'current';
+                        indicatorContent = (idx + 1);
+                    } else {
+                        rowClass = 'pending';
+                        indicatorClass = 'pending';
+                        indicatorContent = (idx + 1);
+                    }
+                    const kpName = item.kp_name || item.kp_id || '未知知识点';
+                    const summary = buildStepSummary(item);
+                    html += `<div class="step-row ${rowClass}" data-item-id="${item.id}" data-index="${idx}" draggable="true" ondragstart="handleDragStart(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" ondragend="handleDragEnd(event)">`;
+                    html += `<div class="step-indicator ${indicatorClass}">${indicatorContent}</div>`;
+                    html += `<div class="step-body"><div class="step-name" onclick="toggleStepExpand(this.parentElement.parentElement, '${item.kp_id}', '${item.id}')">${escapeHtml(kpName)}</div><div class="step-summary">${summary}</div>`;
+                    // 展开详情区
+                    html += `<div class="step-expand" id="step-expand-${item.id}"><span style="color:var(--text-3);font-size:12px;">加载中...</span></div>`;
+                    html += `</div>`;
+                    // 操作按钮组
+                    html += `<div class="step-actions">`;
+                    if (isCompleted) {
+                        html += `<button class="step-action-btn" title="标记未完成" onclick="event.stopPropagation();handleToggleItem('${p.id}', '${item.id}', false)"><i data-lucide="undo-2" style="width:16px;height:16px;"></i></button>`;
+                    } else {
+                        html += `<button class="step-action-btn" title="标记完成" onclick="event.stopPropagation();handleToggleItem('${p.id}', '${item.id}', true)"><i data-lucide="check-check" style="width:16px;height:16px;"></i></button>`;
+                        html += `<button class="step-action-btn" title="开始学习" onclick="event.stopPropagation();location.href='chat.html?kp=${encodeURIComponent(item.kp_id)}'"><i data-lucide="play" style="width:16px;height:16px;"></i></button>`;
+                    }
+                    html += `<button class="step-action-btn drag-handle" title="拖拽排序"><i data-lucide="grip-vertical" style="width:16px;height:16px;"></i></button>`;
+                    html += `<button class="step-action-btn danger" title="移除" onclick="event.stopPropagation();handleRemoveItem('${p.id}', '${item.id}', '${escapeHtml(kpName)}')"><i data-lucide="trash-2" style="width:16px;height:16px;"></i></button>`;
+                    html += `</div>`;
+                    html += `</div>`;
+                });
+                html += `</div></div>`;
+            }
+
+            content.innerHTML = html;
+            content.style.display = 'block';
+            lucide.createIcons();
+        }
+
+        // === 进度尺 ===
+        function renderProgressStepper(items, completed) {
+            if (items.length === 0) return '';
+            let html = '<div class="progress-stepper">';
+            items.forEach((item, idx) => {
+                if (idx > 0) {
+                    const connClass = idx <= completed ? 'done' : 'pending';
+                    html += `<div class="progress-connector ${connClass}"></div>`;
+                }
+                const isCompleted = item.is_completed;
+                const isCurrent = !isCompleted && idx === completed;
+                let nodeClass, nodeContent;
+                if (isCompleted) { nodeClass = 'done'; nodeContent = '&#10003;'; }
+                else if (isCurrent) { nodeClass = 'current'; nodeContent = idx + 1; }
+                else { nodeClass = 'pending'; nodeContent = idx + 1; }
+                html += `<div class="progress-node ${nodeClass}" onclick="scrollToStep(${idx})" title="第${idx+1}步: ${escapeHtml(item.kp_name || item.kp_id || '')}">${nodeContent}</div>`;
+            });
+            html += '</div>';
+            return html;
+        }
+
+        function scrollToStep(idx) {
+            const steps = document.querySelectorAll('#roadmap-steps .step-row');
+            if (steps[idx]) {
+                steps[idx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        // === 步骤摘要信息生成 ===
+        function buildStepSummary(item) {
+            // 基于现有数据的摘要：展示资源类型和状态
+            const parts = [];
+            if (item.is_completed) {
+                parts.push('已完成');
+            } else {
+                parts.push('待学习');
+            }
+            const kpName = item.kp_name || item.kp_id || '';
+            if (kpName) {
+                // 截断过长的名称用于摘要
+            }
+            return parts.join(' · ');
+        }
+
+        // === 步骤展开详情（手风琴模式）===
+        async function toggleStepExpand(rowEl, kpId, itemId) {
+            const wasExpanded = rowEl.classList.contains('expanded');
+            // 收起之前展开的
+            if (expandedStepEl && expandedStepEl !== rowEl) {
+                expandedStepEl.classList.remove('expanded');
+            }
+            if (wasExpanded) {
+                rowEl.classList.remove('expanded');
+                expandedStepEl = null;
+                return;
+            }
+            rowEl.classList.add('expanded');
+            expandedStepEl = rowEl;
+
+            const expandDiv = document.getElementById('step-expand-' + itemId);
+            if (!expandDiv || expandDiv.dataset.loaded) return;
+            expandDiv.dataset.loaded = '1';
+
+            // 加载关联资源
+            let resourcesHtml = '';
+            try {
+                let resources = kpResourcesCache[kpId];
+                if (!resources) {
+                    resources = await getResources(userId, { kp_id: kpId }) || [];
+                    kpResourcesCache[kpId] = resources;
+                }
+                if (resources.length) {
+                    const typeNames = { doc: '文档', mindmap: '思维导图', quiz: '测验', code: '代码', summary: '总结', animation: '动画' };
+                    resourcesHtml = `<div class="step-expand-section"><div class="step-expand-label">已生成资源 (${resources.length})</div>${resources.map(r => `<span class="step-expand-link" onclick="event.stopPropagation();location.href='library.html?preview=${r.id}'">${typeNames[r.resource_type] || r.resource_type} (${r.created_at ? new Date(r.created_at).toLocaleDateString('zh-CN') : ''})</span>`).join('')}</div>`;
+                } else {
+                    resourcesHtml = `<div class="step-expand-section"><div class="step-expand-label">已生成资源</div><span style="font-size:12px;color:var(--text-3);">暂无资源</span></div>`;
+                }
+            } catch (e) { resourcesHtml = ''; }
+
+            // 关联关系（从知识图谱缓存中查找）
+            let relationsHtml = '';
+            if (fullGraph && fullGraph.edges && kpId) {
+                const relEdges = fullGraph.edges.filter(e => e.source_id === kpId || e.target_id === kpId);
+                if (relEdges.length) {
+                    const relParts = relEdges.map(e => {
+                        const isSource = e.source_id === kpId;
+                        const otherId = isSource ? e.target_id : e.source_id;
+                        const otherNode = (fullGraph.nodes || []).find(n => n.id === otherId);
+                        const dir = isSource ? '\u2192' : '\u2190';
+                        return `${dir} ${e.relation || '关联'} ${otherNode ? otherNode.name : otherId}`;
+                    });
+                    relationsHtml = `<div class="step-expand-section"><div class="step-expand-label">关联关系 (${relEdges.length})</div><span style="font-size:12px;">${relParts.join(' &middot; ')}</span></div>`;
+                }
+            }
+
+            expandDiv.innerHTML = `
+                ${relationsHtml}
+                ${resourcesHtml}
+                <div class="step-expand-section">
+                    <span class="step-expand-link" onclick="event.stopPropagation();location.href='generate.html?kp=${encodeURIComponent(kpId)}&kp_name=${encodeURIComponent(rowEl.querySelector('.step-name').textContent)}'">生成学习资源</span>
+                    <span class="step-expand-link" onclick="event.stopPropagation();switchTab(document.querySelectorAll('.tab-btn')[0], 'kg');setTimeout(()=>{const n=fullGraph&&fullGraph.nodes.find(n=>n.id==='${kpId}');if(n)showDetailPanel(n);},300)">在知识图谱中查看</span>
+                </div>
+            `;
+        }
+
+        // === 拖拽排序 ===
+        let dragFromIndex = -1;
+        let dragItemId = null;
+
+        function handleDragStart(e) {
+            dragFromIndex = parseInt(e.currentTarget.dataset.index);
+            dragItemId = e.currentTarget.dataset.itemId;
+            e.currentTarget.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', dragItemId);
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            const row = e.currentTarget;
+            if (!row.classList.contains('dragging')) {
+                row.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            const targetIndex = parseInt(e.currentTarget.dataset.index);
+            const targetItemId = e.currentTarget.dataset.itemId;
+            if (dragFromIndex === targetIndex || !activePathData) return;
+            reorderItems(dragFromIndex, targetIndex);
+        }
+
+        function handleDragEnd(e) {
+            e.currentTarget.classList.remove('dragging');
+            document.querySelectorAll('.step-row.drag-over').forEach(r => r.classList.remove('drag-over'));
+            dragFromIndex = -1;
+            dragItemId = null;
+        }
+
+        async function reorderItems(fromIdx, toIdx) {
+            if (!activePathData) return;
+            const items = [...(activePathData.items || [])];
+            const [moved] = items.splice(fromIdx, 1);
+            items.splice(toIdx, 0, moved);
+            activePathData.items = items;
+            // 更新 order_index
+            items.forEach((item, i) => { item.order_index = i; });
+            renderRoadmap();
+            // 持久化到后端
+            try {
+                const pathId = activePathId;
+                for (const item of items) {
+                    await markPathwayItemDone(pathId, item.id, userId, item.is_completed);
+                }
+                // 同步缓存
+                const idx = pathways.findIndex(p => p.id === activePathId);
+                if (idx >= 0) pathways[idx].items = items;
+                populatePathwayOverlay();
+            } catch (e) {
+                showToast('排序保存失败: ' + (e.message || e), 'error');
+                await loadPathwaysData();
+                renderRoadmap();
+            }
+        }
+
+        // === 移除单个知识点 ===
+        async function handleRemoveItem(pathId, itemId, kpName) {
+            const ok = await showDialog({ type: 'danger', title: '移除知识点', desc: `确定要从路径中移除「${kpName}」吗？`, confirmText: '确认移除' });
+            if (!ok) return;
+            try {
+                await fetch(`/pathways/${pathId}/items/${itemId}?user_id=${encodeURIComponent(userId)}`, { method: 'DELETE' });
+                showToast(`已移除「${kpName}」`, 'success');
+                await loadPathwaysData();
+                renderRoadmap();
+                renderPathwayTabs();
+                populatePathwayOverlay();
+            } catch (e) { showToast('移除失败: ' + (e.message || e), 'error'); }
+        }
+
+        // === 创建路径对话框 ===
+        function openPathwayDialog() {
+            document.getElementById('pathway-dialog-overlay').classList.add('open');
+            document.getElementById('pathway-dialog-name').value = '';
+            setTimeout(() => document.getElementById('pathway-dialog-name').focus(), 100);
+        }
+
+        function closePathwayDialog() {
+            document.getElementById('pathway-dialog-overlay').classList.remove('open');
+        }
+
+        async function handleCreatePathwayFromDialog() {
+            const name = document.getElementById('pathway-dialog-name').value.trim();
+            if (!name) return;
+            try {
+                await createPathway(userId, name);
+                closePathwayDialog();
+                await loadPathwaysData();
+                // 切换到新创建的路径
+                const lastPath = pathways[pathways.length - 1];
+                if (lastPath) selectPathway(lastPath.id);
+                showToast('路径创建成功', 'success');
+            } catch (e) { showToast('创建失败: ' + (e.message || e), 'error'); }
+        }
+
+        // === 标记完成/取消 ===
+        async function handleToggleItem(pathId, itemId, isCompleted) {
+            try {
+                await markPathwayItemDone(pathId, itemId, userId);
+                // 更新本地数据
+                if (activePathData && activePathData.items) {
+                    const item = activePathData.items.find(i => i.id === itemId);
+                    if (item) item.is_completed = isCompleted;
+                }
+                const pi = pathways.findIndex(p => p.id === pathId);
+                if (pi >= 0) {
+                    const item = pathways[pi].items.find(i => i.id === itemId);
+                    if (item) item.is_completed = isCompleted;
+                }
+                renderRoadmap();
+                populatePathwayOverlay();
+            } catch (e) { showToast('操作失败: ' + (e.message || e), 'error'); }
+        }
+
+        // === 删除路径 ===
+        async function handleDeletePathway(id) {
+            const ok = await showDialog({ type: 'danger', title: '确定删除该路径？', desc: '删除后无法恢复', confirmText: '确认删除' });
+            if (!ok) return;
+            try {
+                await deletePathway(id, userId);
+                showToast('路径已删除', 'success');
+                await loadPathwaysData();
+                if (pathways.length) {
+                    activePathId = pathways[0].id;
+                    activePathData = pathways[0];
+                } else {
+                    activePathId = null;
+                    activePathData = null;
+                }
+                renderPathwayTabs();
+                renderRoadmap();
+                populatePathwayOverlay();
+            } catch (e) { showToast('删除失败: ' + (e.message || e), 'error'); }
+        }
+
+        // === 数据加载 ===
+        function _normalizePathwayIds(list) {
+            list.forEach(p => {
+                p.id = String(p.id);
+                if (p.items) {
+                    p.items.forEach(item => { item.id = String(item.id); });
+                }
+            });
+        }
+
+        async function loadPathwaysData() {
+            try {
+                pathways = await getPathways(userId) || [];
+            } catch (e) {
+                pathways = [];
+            }
+            // Normalize Snowflake BigInt IDs to strings (API returns number,
+            // HTML onclick passes as string, === strict comparison needs both string)
+            _normalizePathwayIds(pathways);
+            // 如果当前选中的路径已被删除，切换到第一个
+            if (activePathId && !pathways.find(p => p.id === activePathId)) {
+                activePathId = pathways.length ? pathways[0].id : null;
+                activePathData = pathways.length ? pathways[0] : null;
+            } else if (activePathId && activePathId === (activePathData && activePathData.id)) {
+                // 刷新当前路径数据
+                const fresh = pathways.find(p => p.id === activePathId);
+                if (fresh) activePathData = fresh;
+            }
+        }
+
+        // === 入口：加载并渲染 ===
+        async function loadPathways() {
+            await loadPathwaysData();
+            populatePathwayOverlay();
+            if (!activePathId && pathways.length) {
+                activePathId = pathways[0].id;
+                activePathData = pathways[0];
+            }
+            renderPathwayTabs();
+            renderRoadmap();
+        }
+
+        // 兼容旧调用
+        function showCreatePathway() { openPathwayDialog(); }
+        async function handleCreatePathway() { await handleCreatePathwayFromDialog(); }
+
+        // === HTML 转义 ===
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+
+        // === 路径叠加下拉框 ===
+        function populatePathwayOverlay() {
+            const sel = document.getElementById('kg-pathway-overlay');
+            sel.innerHTML = '<option value="">路径叠加：无</option>' + pathways.map(p => `<option value="${p.id}">${escapeHtml(p.name || '未命名')}</option>`).join('');
+        }
+
+        // === Event bindings ===
+        document.getElementById('kg-doc-select').addEventListener('change', loadKgGraph);
+        document.getElementById('kg-root-select').addEventListener('change', loadKgGraph);
+        document.getElementById('kg-depth').addEventListener('change', loadKgGraph);
+        document.getElementById('kg-pathway-overlay').addEventListener('change', () => { if (fullGraph) applyFilters(); });
+        document.getElementById('kg-learned-toggle').addEventListener('change', async () => {
+            if (document.getElementById('kg-learned-toggle').checked) await loadLearnedState();
+            if (fullGraph) applyFilters();
+        });
+        document.getElementById('kg-search-btn').addEventListener('click', () => { performSearch(); });
+        document.getElementById('kg-search').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') performSearch();
+        });
+        document.getElementById('kg-bg-toggle').addEventListener('change', () => {
+            const area = document.querySelector('.kg-graph-area');
+            const isLight = document.getElementById('kg-bg-toggle').checked;
+            area.classList.toggle('light-bg', isLight);
+            // Update label colors for readability on light background
+            if (chartInstance && fullGraph) applyFilters();
+        });
+
+        // === Init ===
+        loadDocumentOptions();
+        loadKgGraph();
+        loadPathways(); // pre-cache for overlay
+
+        // 支持 URL 参数自动切换 tab：?tab=pathways
+        const _urlParams = new URLSearchParams(window.location.search);
+        const _initTab = _urlParams.get('tab');
+        if (_initTab === 'pathways') {
+            const btn = document.querySelectorAll('.tab-btn')[1];
+            if (btn) switchTab(btn, 'pathways');
+        } else if (_initTab === 'study-plan') {
+            const btn = document.querySelectorAll('.tab-btn')[2];
+            if (btn) switchTab(btn, 'study-plan');
+        }
+
+        // ============================================================
+        // === 学习计划 ===
+        // ============================================================
+
+        let studyPlans = [];
+
+        async function loadStudyPlans() {
+            try {
+                studyPlans = await listStudyPlans(userId) || [];
+            } catch (e) {
+                studyPlans = [];
+            }
+            _normalizeStudyPlanIds(studyPlans);
+            renderStudyPlanList();
+        }
+
+        function _normalizeStudyPlanIds(plans) {
+            plans.forEach(p => {
+                p.id = String(p.id);
+                if (p.items) p.items.forEach(it => { it.id = String(it.id); });
+            });
+        }
+
+        function renderStudyPlanList() {
+            const empty = document.getElementById('sp-empty');
+            const list = document.getElementById('sp-list');
+
+            if (!studyPlans.length) {
+                empty.style.display = 'block';
+                list.style.display = 'none';
+                return;
+            }
+            empty.style.display = 'none';
+            list.style.display = 'block';
+
+            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+
+            let html = '';
+            studyPlans.forEach(plan => {
+                const items = plan.items || [];
+                const completed = items.filter(i => i.is_completed).length;
+                const total = items.length;
+                const pct = total ? Math.round(completed / total * 100) : 0;
+
+                html += `<div class="sp-plan-card" id="sp-card-${plan.id}">`;
+                // Header
+                html += `<div class="sp-plan-header" onclick="window._toggleSpCollapse('${plan.id}')">`;
+                html += `<div class="sp-plan-header-left">`;
+                html += `<div class="sp-plan-title">${escapeHtml(plan.title || '学习计划')}</div>`;
+                html += `<div class="sp-plan-meta">${plan.start_date || ''} ~ ${plan.end_date || ''} · 每日 ${plan.daily_time_minutes || '-'} 分钟 · ${completed}/${total} 项完成</div>`;
+                html += `</div>`;
+                const statusClass = plan.status || 'active';
+                const statusLabel = { active: '进行中', archived: '已归档', completed: '已完成' }[statusClass] || statusClass;
+                html += `<span class="sp-plan-status ${statusClass}">${statusLabel}</span>`;
+                html += `<button class="btn btn-secondary btn-sm sp-plan-header-btn" onclick="event.stopPropagation();window._handleSpSendEmail('${plan.id}')"><i data-lucide="mail" style="width:13px;height:13px;"></i> 发送到邮箱</button>`;
+                html += `<button class="btn-delete btn-sm sp-plan-header-btn" onclick="event.stopPropagation();window._handleSpDelete('${plan.id}')"><i data-lucide="trash-2" style="width:13px;height:13px;"></i> 删除计划</button>`;
+                html += `<i data-lucide="chevron-down" class="sp-plan-arrow"></i>`;
+                html += `</div>`;
+
+                // Body
+                html += `<div class="sp-plan-body">`;
+                html += `<div class="sp-plan-progress"><span>完成进度 ${pct}%</span><div class="sp-progress-bar"><div class="sp-progress-fill" style="width:${pct}%"></div></div></div>`;
+
+                // Group items by date
+                const itemsByDate = new Map();
+                items.forEach(it => {
+                    const d = it.scheduled_date || '未排期';
+                    if (!itemsByDate.has(d)) itemsByDate.set(d, []);
+                    itemsByDate.get(d).push(it);
+                });
+
+                itemsByDate.forEach((dayItems, dateStr) => {
+                    const d = new Date(dateStr + 'T00:00:00');
+                    let label;
+                    if (dateStr === '未排期') {
+                        label = '未排期';
+                    } else {
+                        const m = d.getMonth() + 1;
+                        const day = d.getDate();
+                        const wd = weekdays[d.getDay()];
+                        label = `${m}月${day}日 周${wd}`;
+                    }
+                    html += `<div class="sp-day-group"><div class="sp-day-label" onclick="event.stopPropagation();this.parentElement.classList.toggle('collapsed')"><i data-lucide="chevron-down" class="sp-day-label-arrow"></i>${label}</div><div class="sp-day-items">`;
+
+                    dayItems.forEach(it => {
+                        const isDone = it.is_completed;
+                        html += `<div class="sp-item-row">`;
+                        html += `<div class="sp-item-check${isDone ? ' done' : ''}" onclick="event.stopPropagation();window._handleSpItemToggle('${plan.id}', '${it.id}', ${!isDone})">`;
+                        if (isDone) html += `<i data-lucide="check" style="width:14px;height:14px;"></i>`;
+                        html += `</div>`;
+                        html += `<div class="sp-item-info">`;
+                        html += `<div class="sp-item-name${isDone ? ' done' : ''}" onclick="location.href='chat.html?kp=${encodeURIComponent(it.kp_id || '')}'">${escapeHtml(it.kp_name)}</div>`;
+                        html += `<div class="sp-item-meta">`;
+                        if (it.start_time) html += `<span class="sp-item-time">${it.start_time} - ${it.end_time || ''}</span>`;
+                        html += `<span class="sp-item-minutes">${it.estimated_minutes || '-'} 分钟</span>`;
+                        if (it.notes) html += `<span style="color:var(--text-3);">${escapeHtml(it.notes)}</span>`;
+                        html += `</div></div>`;
+                        html += `<div class="sp-item-resources">`;
+                        if (it.resources && it.resources.length) {
+                            it.resources.slice(0, 3).forEach(r => {
+                                const typeNames = { doc: '文档', mindmap: '导图', quiz: '测验', code: '代码', summary: '总结', animation: '动画' };
+                                const typeLabel = typeNames[r.resource_type] || r.resource_type;
+                                html += `<span class="sp-res-tag" onclick="event.stopPropagation();location.href='library.html?preview=${r.resource_id}'">${typeLabel}</span>`;
+                            });
+                            if (it.resources.length > 3) html += `<span style="font-size:11px;color:var(--text-3);">+${it.resources.length - 3}</span>`;
+                        }
+                        if (it.missing_resource_types && it.missing_resource_types.length) {
+                            it.missing_resource_types.forEach(t => {
+                                html += `<span class="sp-res-missing" onclick="event.stopPropagation();window._handleSpGenMissing('${plan.id}', '${it.id}', '${t}')" title="点击生成${t}资源">缺${t}</span>`;
+                            });
+                        }
+                        html += `</div>`;
+                        if (it.missing_resource_types && it.missing_resource_types.length) {
+                            html += `<button class="btn btn-secondary btn-sm" style="font-size:11px;padding:2px 8px;white-space:nowrap;" onclick="event.stopPropagation();window._handleSpGenMissing('${plan.id}', '${it.id}')">生成资源</button>`;
+                        }
+                        html += `</div>`;
+                    });
+
+                    html += `</div></div>`;
+                });
+
+                html += `</div></div>`;
+            });
+
+            list.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function _toggleSpCollapse(planId) {
+            const card = document.getElementById('sp-card-' + planId);
+            if (card) card.classList.toggle('collapsed');
+        }
+
+        function _showSpGenerateDialog() {
+            document.getElementById('sp-dialog-overlay').classList.add('open');
+            const today = new Date().toISOString().slice(0, 10);
+            document.getElementById('sp-dialog-start').value = today;
+            document.getElementById('sp-dialog-title').value = '';
+            document.getElementById('sp-dialog-days').value = '';
+            document.getElementById('sp-dialog-daily').value = '';
+        }
+
+        function _closeSpGenerateDialog() {
+            document.getElementById('sp-dialog-overlay').classList.remove('open');
+        }
+
+        async function _handleSpGenerate() {
+            const btn = document.getElementById('sp-dialog-generate-btn');
+            btn.disabled = true;
+            btn.textContent = '生成中...';
+            try {
+                const data = {};
+                const title = document.getElementById('sp-dialog-title').value.trim();
+                if (title) data.title = title;
+                const start = document.getElementById('sp-dialog-start').value;
+                if (start) data.start_date = start;
+                const days = parseInt(document.getElementById('sp-dialog-days').value);
+                if (days) data.days = days;
+                const daily = parseInt(document.getElementById('sp-dialog-daily').value);
+                if (daily) data.daily_time_minutes = daily;
+
+                const plan = await generateStudyPlan(userId, data);
+                if (plan) {
+                    showToast('学习计划已生成', 'success');
+                    _closeSpGenerateDialog();
+                    await loadStudyPlans();
+                } else {
+                    showToast('生成失败：没有可用的候选知识点，请先建立学习路径或完善画像', 'error');
+                }
+            } catch (e) {
+                showToast('生成失败: ' + (e.message || e), 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '开始生成';
+            }
+        }
+
+        async function _handleSpItemToggle(planId, itemId, isCompleted) {
+            try {
+                await updateStudyPlanItem(planId, itemId, userId, { is_completed: isCompleted });
+                const plan = studyPlans.find(p => p.id === planId);
+                if (plan) {
+                    const item = (plan.items || []).find(i => i.id === itemId);
+                    if (item) item.is_completed = isCompleted;
+                    renderStudyPlanList();
+                }
+            } catch (e) {
+                showToast('操作失败: ' + (e.message || e), 'error');
+            }
+        }
+
+        async function _handleSpGenMissing(planId, itemId, singleType) {
+            const plan = studyPlans.find(p => p.id === planId);
+            if (!plan) return;
+            const item = (plan.items || []).find(i => i.id === itemId);
+            if (!item) return;
+            const types = singleType ? [singleType] : (item.missing_resource_types || []);
+            if (!types.length) return;
+
+            try {
+                const result = await generateStudyPlanItemResources(planId, itemId, userId, types);
+                if (result) {
+                    showToast(result.message || '已触发资源生成', 'success');
+                    setTimeout(async () => {
+                        await loadStudyPlans();
+                    }, 3000);
+                }
+            } catch (e) {
+                showToast('资源生成失败: ' + (e.message || e), 'error');
+            }
+        }
+
+        async function _handleSpSendEmail(planId) {
+            const plan = studyPlans.find(p => p.id === planId);
+            if (!plan) { showToast('计划不存在', 'error'); return; }
+
+            const items = plan.items || [];
+            const total = items.length;
+            const completed = items.filter(i => i.is_completed).length;
+            const dateSet = new Set();
+            items.forEach(it => { if (it.scheduled_date && it.scheduled_date !== '未排期') dateSet.add(it.scheduled_date); });
+            const dayCount = dateSet.size || Math.ceil(total / 2) || '?';
+
+            const desc = [
+                `计划：${plan.title || '学习计划'}`,
+                `周期：${plan.start_date || '?'} ~ ${plan.end_date || '?'}`,
+                `内容：${dayCount} 天，${total} 项任务（${completed} 项已完成）`,
+                ``,
+                `邮件将发送至您的注册邮箱，包含完整的每日学习安排。`,
+            ].join('\n');
+
+            const ok = await showDialog({ type: 'normal', title: '发送学习计划到邮箱？', desc, confirmText: '确认发送', cancelText: '取消' });
+            if (!ok) return;
+
+            try {
+                const { sendStudyPlanEmail } = await import('./assets/api.js');
+                const result = await sendStudyPlanEmail(planId, userId);
+                if (result) showToast(result.message || '邮件已发送', 'success');
+            } catch (e) {
+                showToast('发送失败: ' + (e.message || e), 'error');
+            }
+        }
+
+        async function _handleSpDelete(planId) {
+            const ok = await showDialog({ type: 'danger', title: '确定删除该学习计划？', desc: '删除后无法恢复', confirmText: '确认删除' });
+            if (!ok) return;
+            try {
+                await deleteStudyPlan(planId, userId);
+                showToast('计划已删除', 'success');
+                await loadStudyPlans();
+            } catch (e) {
+                showToast('删除失败: ' + (e.message || e), 'error');
+            }
+        }
+
+        // === Expose to global (required: type="module" isolates scope, onclick needs window.*) ===
+        window.switchTab = switchTab;
+        window.loadKgGraph = loadKgGraph;
+        window.selectPathway = selectPathway;
+        window.toggleMorePathways = toggleMorePathways;
+        window.openPathwayDialog = openPathwayDialog;
+        window.closePathwayDialog = closePathwayDialog;
+        window.handleCreatePathwayFromDialog = handleCreatePathwayFromDialog;
+        window.handleRemoveItem = handleRemoveItem;
+        window.scrollToStep = scrollToStep;
+        window.toggleStepExpand = toggleStepExpand;
+        window.handleDragStart = handleDragStart;
+        window.handleDragOver = handleDragOver;
+        window.handleDragLeave = handleDragLeave;
+        window.handleDrop = handleDrop;
+        window.handleDragEnd = handleDragEnd;
+        window.showCreatePathway = showCreatePathway;
+        window.handleCreatePathway = handleCreatePathway;
+        window.handleDeletePathway = handleDeletePathway;
+        window.handleToggleItem = handleToggleItem;
+        window._toggleSpCollapse = _toggleSpCollapse;
+        window._showSpGenerateDialog = _showSpGenerateDialog;
+        window._closeSpGenerateDialog = _closeSpGenerateDialog;
+        window._handleSpGenerate = _handleSpGenerate;
+        window._handleSpItemToggle = _handleSpItemToggle;
+        window._handleSpGenMissing = _handleSpGenMissing;
+        window._handleSpSendEmail = _handleSpSendEmail;
+        window._handleSpDelete = _handleSpDelete;
+        }
+
+        function destroy() {
+            if (chartInstance) { chartInstance.dispose(); chartInstance = null; }
+            if (resizeHandler) { window.removeEventListener('resize', resizeHandler); resizeHandler = null; }
+        }
+
+        registerPage('pathway', init, destroy);
+        init();
+    </script>
+    <script>lucide.createIcons();</script>
+    <script src="./assets/tracker.js"></script>
+    <script type="module" src="./assets/assistant.js"></script>
+
+</body>
+</html>

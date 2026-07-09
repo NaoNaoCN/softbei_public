@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学习计划表</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f5f7fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f7fa;padding:40px 0;">
+  <tr>
+    <td align="center">
+      <table width="640" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#C77B3C,#A8743C);padding:28px 40px;text-align:center;">
+            <h1 style="color:#ffffff;font-size:22px;margin:0;font-weight:700;">学习计划表</h1>
+            <p style="color:rgba(255,255,255,0.85);font-size:13px;margin:6px 0 0;">{{ title }}</p>
+          </td>
+        </tr>
+
+        <!-- Summary -->
+        <tr>
+          <td style="padding:24px 32px 8px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="font-size:13px;color:#6b7280;padding:4px 12px;">
+                  计划周期 <strong style="color:#1f2937;">{{ start_date }} ~ {{ end_date }}</strong>
+                </td>
+                <td style="font-size:13px;color:#6b7280;padding:4px 12px;text-align:right;">
+                  每日预算 <strong style="color:#C77B3C;font-size:16px;">{{ daily_time_minutes }}</strong> 分钟
+                </td>
+              </tr>
+              {% if goal %}
+              <tr>
+                <td colspan="2" style="font-size:13px;color:#6b7280;padding:4px 12px;">
+                  学习目标 <strong style="color:#1f2937;">{{ goal }}</strong>
+                </td>
+              </tr>
+              {% endif %}
+            </table>
+          </td>
+        </tr>
+
+        <!-- Separator -->
+        <tr><td style="padding:0 32px;"><div style="border-top:1px solid #e5e7eb;"></div></td></tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:20px 32px 32px;">
+            <p style="font-size:14px;color:#1f2937;line-height:1.6;margin:0 0 16px;">
+              您好 <strong style="color:#C77B3C;">{{ username }}</strong>，以下是您的学习计划安排：
+            </p>
+
+            {% if items_by_date %}
+            {% for date_key, items in items_by_date.items() %}
+            <!-- Date Header -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:12px;">
+              <tr>
+                <td style="background-color:#FDF8F2;padding:8px 14px;border-radius:8px 8px 0 0;border-left:4px solid #C77B3C;">
+                  <span style="font-size:14px;font-weight:700;color:#C77B3C;">{{ date_key }}</span>
+                  <span style="font-size:11px;color:#9A8A76;margin-left:8px;">{{ items|length }} 项任务</span>
+                </td>
+              </tr>
+
+              {% for item in items %}
+              <tr>
+                <td style="padding:10px 14px;border:1px solid #f0ebe1;border-top:none;{% if not loop.last %}border-bottom:none;{% else %}border-radius:0 0 8px 8px;{% endif %}">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <!-- Time slot -->
+                      <td style="width:80px;vertical-align:top;padding-right:10px;">
+                        {% if item.start_time and item.end_time %}
+                        <span style="display:inline-block;background:rgba(199,123,60,0.08);color:#C77B3C;font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;">
+                          {{ item.start_time }}<br>~ {{ item.end_time }}
+                        </span>
+                        {% else %}
+                        <span style="color:#9A8A76;font-size:11px;">#{{ item.order_index }}</span>
+                        {% endif %}
+                      </td>
+
+                      <!-- Content -->
+                      <td style="vertical-align:top;">
+                        <div style="font-size:13px;font-weight:600;color:#1f2937;margin-bottom:2px;">
+                          {% if item.is_completed %}&#x2705; {% endif %}{{ item.kp_name }}
+                        </div>
+                        {% if item.notes %}
+                        <div style="font-size:11px;color:#6b7280;margin-bottom:3px;">{{ item.notes }}</div>
+                        {% endif %}
+                        <span style="font-size:11px;color:#9A8A76;">
+                          预估 {{ item.estimated_minutes }}分钟
+                          {% if item.resources %}&middot; {{ item.resources|length }} 个资源{% endif %}
+                          {% if item.missing_resource_types %} &middot; 待生成: {{ item.missing_resource_types|join(', ') }}{% endif %}
+                        </span>
+                      </td>
+
+                      <!-- Status -->
+                      <td style="width:50px;text-align:right;vertical-align:top;">
+                        {% if item.is_completed %}
+                        <span style="display:inline-block;background:#ecfdf5;color:#059669;font-size:10px;font-weight:600;padding:2px 8px;border-radius:8px;">已完成</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              {% endfor %}
+            </table>
+            {% endfor %}
+            {% else %}
+            <p style="font-size:13px;color:#9A8A76;text-align:center;padding:16px;">暂无计划项</p>
+            {% endif %}
+
+            <!-- CTA -->
+            <table cellpadding="0" cellspacing="0" style="margin:24px auto 0;">
+              <tr>
+                <td align="center" style="background-color:#C77B3C;border-radius:8px;padding:12px 32px;">
+                  <a href="http://localhost:8000/app/schedule.html" target="_blank" style="color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;display:inline-block;">查看完整计划</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background-color:#f9fafb;padding:20px 40px;text-align:center;border-top:1px solid #e5e7eb;">
+            <p style="font-size:12px;color:#9ca3af;margin:0;">
+              个性化资源生成与学习多智能体系统
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

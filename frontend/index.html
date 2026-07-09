@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
+    <title>智学工坊 · 主页</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <script src="https://unpkg.com/lucide@0.460.0"></script>
+    <link rel="stylesheet" href="./assets/styles-v4.css">
+    <link rel="stylesheet" href="./assets/assistant.css">
+    <style>
+
+        /* Hero area */
+        .hero { margin-bottom: 14px; }
+        hr.section-divider { margin: 10px 0 16px; }
+        .hero-greeting { font-family: var(--display); font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+        .hero-greeting .accent { color: var(--accent); }
+        .hero-meta { display: flex; align-items: center; gap: 12px; margin-top: 6px; font-size: 13px; color: var(--text-3); }
+        .hero-quote { margin-top: 8px; font-size: 13px; color: var(--text-3); font-style: italic; padding-left: 12px; border-left: 2px solid rgba(199,123,60,0.20); }
+
+        /* Stats row */
+        .home-stats { display: flex; gap: 32px; padding: 8px 0 12px; }
+        .home-stat-num { font-family: var(--display); font-size: 26px; font-weight: 800; color: var(--accent); line-height: 1.2; }
+        .home-stat-lbl { font-size: 12px; color: var(--text-3); }
+
+        /* Two-column grid */
+        .home-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 26px; margin: 14px 0 18px; }
+
+        /* Left: heatmap area */
+        .home-heatmap { }
+        .hm-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; max-width: 320px; }
+        .hm-title { font-family: var(--display); font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+        .hm-title i { color: var(--accent); }
+        .hm-nav { display: flex; align-items: center; gap: 4px; }
+        .hm-nav-btn { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 4px; border: none; background: transparent; color: var(--text-3); cursor: pointer; }
+        .hm-nav-btn:hover { background: var(--bg-hover); color: var(--accent); }
+        .hm-nav-btn:disabled { opacity: 0.3; cursor: default; }
+        .hm-month { font-size: 13px; color: var(--text-2); font-weight: 500; min-width: 80px; text-align: center; }
+        .hm-legend { display: flex; align-items: center; gap: 4px; margin-bottom: 8px; font-size: 10px; color: var(--text-4); max-width: 320px; }
+        .hm-legend-swatch { width: 10px; height: 10px; border-radius: 2px; }
+        .hm-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; max-width: 320px; }
+        .hm-cell { aspect-ratio: 1; border-radius: 2px; background: rgba(120,90,60,0.06); cursor: pointer; transition: transform 0.15s; position: relative; }
+        .hm-cell:hover { transform: scale(1.18); z-index: 2; }
+        .hm-cell[data-level="1"] { background: #E8CDA0; }
+        .hm-cell[data-level="2"] { background: #D4A56A; }
+        .hm-cell[data-level="3"] { background: #C77B3C; }
+        .hm-cell[data-level="4"] { background: #A8652E; }
+        .hm-cell.today { box-shadow: 0 0 0 2px var(--accent); z-index: 1; }
+        .hm-cell.out-of-month { opacity: 0.2; pointer-events: none; }
+        .hm-day-label { text-align: center; font-size: 9px; color: var(--text-4); padding: 1px 0; }
+
+        /* Right: panels */
+        .home-panels { display: flex; flex-direction: column; gap: 20px; }
+
+        /* Mini bar chart */
+        .bar-row { display: flex; align-items: flex-end; gap: 3px; height: 64px; }
+        .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .bar-fill { width: 100%; max-width: 14px; border-radius: 2px 2px 0 0; background: var(--accent); transition: height 0.5s var(--ease); min-height: 2px; }
+        .bar-label { font-size: 9px; color: var(--text-4); white-space: nowrap; }
+
+        /* Progress rings */
+        .ring-row { display: flex; flex-wrap: wrap; gap: 8px; }
+        .ring-item { flex: 1; min-width: 50px; text-align: center; }
+        .ring-svg { width: 44px; height: 44px; }
+        .ring-bg { fill: none; stroke: rgba(120,90,60,0.10); stroke-width: 4; }
+        .ring-fg { fill: none; stroke-width: 4; stroke-linecap: round; transition: stroke-dashoffset 0.7s var(--ease); }
+        .ring-name { font-size: 10px; color: var(--text-3); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ring-val { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--text-1); }
+
+        /* Alert items */
+        .alert-item { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 12.5px; }
+        .alert-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+        .alert-dot.urgent { background: var(--danger); }
+        .alert-dot.warning { background: var(--warning); }
+        .alert-dot.safe { background: var(--success); }
+        .alert-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }
+        .alert-action { font-size: 11px; color: var(--accent); white-space: nowrap; font-weight: 500; }
+
+        /* Timeline */
+        .tl-item { display: flex; align-items: center; gap: 10px; padding: 5px 0; font-size: 12.5px; }
+        .tl-item + .tl-item { border-top: 1px solid var(--divider); }
+        .tl-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; background: var(--accent); }
+        .tl-text { flex: 1; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tl-time { font-size: 11px; color: var(--text-4); white-space: nowrap; }
+
+        /* Goal progress */
+        .goal-bar-row { display: flex; align-items: center; gap: 14px; margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--divider); }
+        .goal-label { font-size: 13px; font-weight: 600; color: var(--text-2); white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+        .goal-bar { flex: 1; height: 5px; background: var(--divider); border-radius: 3px; overflow: hidden; }
+        .goal-fill { height: 100%; border-radius: 3px; background: var(--accent); transition: width 0.7s var(--ease); }
+        .goal-val { font-size: 12px; color: var(--text-2); white-space: nowrap; }
+
+        @media (max-width: 860px) {
+            .home-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 640px) {
+            .home-stats { flex-wrap: wrap; gap: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="view">
+    <div class="app-layout">
+        <main class="app-content">
+            <div class="app-body">
+
+                <!-- Hero -->
+                <div class="hero fade-up d1">
+                    <div class="hero-greeting" id="greeting">欢迎回来，<span class="accent">同学</span></div>
+                    <div class="hero-meta">
+                        <span id="hero-date"></span><span>· 12 Agent 已就绪</span>
+                    </div>
+                    <div class="hero-quote" id="hero-quote">学而不思则罔，思而不学则殆</div>
+                </div>
+
+                <hr class="section-divider">
+
+                <!-- Stats -->
+                <div class="home-stats fade-up d2">
+                    <div><div class="home-stat-num" id="kpi-streak">-</div><div class="home-stat-lbl">连续学习（天）</div></div>
+                    <div><div class="home-stat-num" id="kpi-mastered">-</div><div class="home-stat-lbl">已掌握知识点</div></div>
+                    <div><div class="home-stat-num" id="kpi-minutes">-</div><div class="home-stat-lbl">总学习（分钟）</div></div>
+                </div>
+
+                <!-- Two-column -->
+                <div class="home-grid">
+
+                    <!-- LEFT: Heatmap -->
+                    <div class="home-heatmap fade-up d3">
+                        <div class="hm-head">
+                            <span class="hm-title"><i data-lucide="calendar-days" style="width:15px;height:15px;"></i> 学习热力</span>
+                            <span class="hm-nav">
+                                <button class="hm-nav-btn" id="hm-prev"><i data-lucide="chevron-left" style="width:13px;height:13px;"></i></button>
+                                <span class="hm-month" id="hm-month-label"></span>
+                                <button class="hm-nav-btn" id="hm-next"><i data-lucide="chevron-right" style="width:13px;height:13px;"></i></button>
+                            </span>
+                        </div>
+                        <div class="hm-legend">
+                            <span>少</span><span class="hm-legend-swatch" style="background:rgba(120,90,60,0.06);"></span>
+                            <span class="hm-legend-swatch" style="background:#E8CDA0;"></span>
+                            <span class="hm-legend-swatch" style="background:#D4A56A;"></span>
+                            <span class="hm-legend-swatch" style="background:#C77B3C;"></span>
+                            <span class="hm-legend-swatch" style="background:#A8652E;"></span>
+                            <span>多</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;max-width:320px;">
+                            <div class="hm-day-label">一</div><div class="hm-day-label">二</div><div class="hm-day-label">三</div>
+                            <div class="hm-day-label">四</div><div class="hm-day-label">五</div><div class="hm-day-label">六</div><div class="hm-day-label">日</div>
+                        </div>
+                        <div class="hm-grid" id="heatmap-cells"></div>
+                        <div class="empty-state" id="heatmap-empty" style="display:none;">暂无学习记录</div>
+                    </div>
+
+                    <!-- RIGHT: Panels -->
+                    <div class="home-panels fade-up d3">
+                        <!-- Trend bars + rings -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                            <div>
+                                <div class="section-title" style="margin-bottom:8px;"><i data-lucide="bar-chart-3" style="width:14px;height:14px;display:inline;vertical-align:-2px;margin-right:4px;"></i>学习活跃度</div>
+                                <div class="bar-row" id="trend-bars"><div class="empty-state">加载中…</div></div>
+                            </div>
+                            <div>
+                                <div class="section-title" style="margin-bottom:8px;"><i data-lucide="target" style="width:14px;height:14px;display:inline;vertical-align:-2px;margin-right:4px;"></i>知识掌握度</div>
+                                <div class="ring-row" id="progress-rings"><div class="empty-state">加载中…</div></div>
+                            </div>
+                        </div>
+
+                        <!-- Forgetting + Timeline -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                            <div>
+                                <div class="section-title" style="margin-bottom:8px;"><i data-lucide="bell" style="width:14px;height:14px;display:inline;vertical-align:-2px;margin-right:4px;"></i>遗忘预警</div>
+                                <div id="forgetting-list"><div class="empty-state">加载中…</div></div>
+                            </div>
+                            <div>
+                                <div class="section-title" style="margin-bottom:8px;"><i data-lucide="history" style="width:14px;height:14px;display:inline;vertical-align:-2px;margin-right:4px;"></i>最近动态</div>
+                                <div id="recent-list"><div class="empty-state">加载中…</div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Goal progress -->
+                <div class="goal-bar-row fade-up d4">
+                    <span class="goal-label"><i data-lucide="flag" style="width:14px;height:14px;"></i> 学习目标</span>
+                    <div class="goal-bar"><div class="goal-fill" id="goal-fill" style="width:0%;"></div></div>
+                    <span class="goal-val" id="goal-text">- / - 知识点</span>
+                </div>
+
+            </div>
+        </main>
+    </div>
+    </div>
+
+    <script type="module">
+        import { isLoggedIn, getUserId, getLearningAnalytics, getUser } from './assets/api.js';
+        import { registerPage, initSidebar } from './assets/nav.js';
+
+        if (!isLoggedIn()) { window.location.href = 'auth.html'; }
+        const userId = getUserId();
+
+        async function init() {
+            initSidebar('index');
+
+            // Greeting
+            const h = new Date().getHours();
+            let name = '同学';
+            try {
+                const user = await getUser(userId);
+                if (user && user.username) name = user.username;
+            } catch (e) { /* ignore, use fallback */ }
+            const greet = h < 6 ? '夜深了' : h < 9 ? '早上好' : h < 12 ? '上午好' : h < 14 ? '中午好' : h < 18 ? '下午好' : '晚上好';
+            document.getElementById('greeting').innerHTML = greet + '，<span class="accent">' + name + '</span>';
+            const d = new Date();
+            const week = ['周日','周一','周二','周三','周四','周五','周六'];
+            document.getElementById('hero-date').textContent = (d.getMonth()+1) + '月' + d.getDate() + '日 ' + week[d.getDay()];
+            const quotes = ['学而不思则罔，思而不学则殆', '温故而知新，可以为师矣', '博学之，审问之，慎思之，明辨之，笃行之', '不积跬步，无以至千里', '敏而好学，不耻下问'];
+            document.getElementById('hero-quote').textContent = quotes[Math.floor(Math.random() * quotes.length)];
+
+            await loadDashboard();
+            lucide.createIcons();
+        }
+
+        function destroy() {}
+
+        // ---- Heatmap ----
+        let hmMonthOffset = 0, hmDailyData = [];
+
+        function renderHeatmap() {
+            const grid = document.getElementById('heatmap-cells');
+            const empty = document.getElementById('heatmap-empty');
+            const label = document.getElementById('hm-month-label');
+            const btnPrev = document.getElementById('hm-prev');
+            const btnNext = document.getElementById('hm-next');
+            const now = new Date();
+            const target = new Date(now.getFullYear(), now.getMonth() + hmMonthOffset, 1);
+            const year = target.getFullYear(), month = target.getMonth();
+            label.textContent = year + '年' + (month + 1) + '月';
+            btnPrev.disabled = false;
+            btnNext.disabled = (hmMonthOffset >= 0);
+            const todayStr = now.toISOString().slice(0, 10);
+            const valMap = {};
+            if (hmDailyData && hmDailyData.length) { hmDailyData.forEach(d => { valMap[d.date] = d.minutes || 0; }); }
+            const firstDay = new Date(year, month, 1);
+            let start = new Date(firstDay);
+            const dow = start.getDay();
+            start.setDate(start.getDate() + (dow === 0 ? -6 : 1 - dow));
+            const cells = [];
+            for (let w = 0; w < 5; w++) {
+                for (let d = 0; d < 7; d++) {
+                    const date = new Date(start);
+                    date.setDate(date.getDate() + w * 7 + d);
+                    const dateStr = date.toISOString().slice(0, 10);
+                    const val = valMap[dateStr] || 0;
+                    const inMonth = date.getMonth() === month;
+                    const isToday = dateStr === todayStr;
+                    let level = 0;
+                    if (val > 0 && inMonth) {
+                        if (val >= 60) level = 4; else if (val >= 30) level = 3; else if (val >= 15) level = 2; else level = 1;
+                    }
+                    cells.push({ dateStr, level, inMonth, isToday });
+                }
+            }
+            if (!hmDailyData || !hmDailyData.length) { grid.innerHTML = ''; empty.style.display = ''; }
+            else {
+                empty.style.display = 'none';
+                grid.innerHTML = cells.map(c => {
+                    const classes = ['hm-cell'];
+                    if (c.isToday) classes.push('today');
+                    if (!c.inMonth) classes.push('out-of-month');
+                    const cls = classes.join(' ');
+                    const attr = c.level > 0 && c.inMonth ? ` class="${cls}" data-level="${c.level}" title="${c.dateStr}: ${valMap[c.dateStr] || 0}分钟"` : ` class="${cls}" title="${c.dateStr}"`;
+                    return `<div ${attr}></div>`;
+                }).join('');
+                grid.querySelectorAll('.hm-cell[data-level]').forEach(c => c.addEventListener('click', () => { window.location.href = 'evaluate.html'; }));
+            }
+        }
+
+        function hmGo(o) { hmMonthOffset = o; renderHeatmap(); }
+        document.getElementById('hm-prev').addEventListener('click', () => hmGo(hmMonthOffset - 1));
+        document.getElementById('hm-next').addEventListener('click', () => { if (hmMonthOffset < 0) hmGo(hmMonthOffset + 1); });
+
+        // ---- Trend Bars ----
+        function renderTrendBars(dailyTrend) {
+            const c = document.getElementById('trend-bars');
+            if (!dailyTrend || !dailyTrend.length) { c.innerHTML = '<div class="empty-state">暂无记录</div>'; return; }
+            const recent = dailyTrend.slice(-14);
+            const max = Math.max(...recent.map(d => d.minutes), 1);
+            c.innerHTML = recent.map(d => {
+                const h = Math.max(2, Math.round(d.minutes / max * 52));
+                return `<div class="bar-col"><div class="bar-fill" style="height:${h}px;"></div><div class="bar-label">${d.date.slice(5)}</div></div>`;
+            }).join('');
+        }
+
+        // ---- Progress Rings ----
+        function renderProgressRings(quizMastery) {
+            const c = document.getElementById('progress-rings');
+            const colors = ['#C77B3C', '#D4954A', '#6E9466', '#C98A2E', '#7A9367'];
+            if (!quizMastery || !quizMastery.length) { c.innerHTML = '<div class="empty-state">暂无测验</div>'; return; }
+            const top = quizMastery.slice(0, 5);
+            const circ = 2 * Math.PI * 16;
+            c.innerHTML = top.map((m, i) => {
+                const score = m.mastery_score !== undefined ? m.mastery_score : m.accuracy;
+                const offset = circ * (1 - score / 100);
+                return `<div class="ring-item"><svg class="ring-svg" viewBox="0 0 40 40">
+                    <circle class="ring-bg" cx="20" cy="20" r="16"/>
+                    <circle class="ring-fg" cx="20" cy="20" r="16" stroke="${colors[i%5]}" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" transform="rotate(-90 20 20)"/>
+                </svg><div class="ring-val">${Math.round(score)}</div><div class="ring-name">${esc(m.kp_name)}</div></div>`;
+            }).join('');
+        }
+
+        // ---- Forgetting ----
+        function renderForgetting(items) {
+            const c = document.getElementById('forgetting-list');
+            const nr = (items || []).filter(i => i.needs_review);
+            if (!nr.length) { c.innerHTML = '<div class="empty-state">全部在记忆窗口内</div>'; return; }
+            const cls = { high: 'urgent', medium: 'warning', low: 'safe' };
+            c.innerHTML = nr.slice(0, 5).map(i => `<div class="alert-item">
+                <span class="alert-dot ${cls[i.urgency] || 'safe'}"></span>
+                <span class="alert-name">${esc(i.kp_name)}</span>
+                <a class="alert-action" href="generate.html?kp=${encodeURIComponent(i.kp_id || i.kp_name)}&type=doc">复习</a>
+            </div>`).join('');
+        }
+
+        // ---- Timeline ----
+        function renderTimeline(activities) {
+            const c = document.getElementById('recent-list');
+            if (!activities || !activities.length) { c.innerHTML = '<div class="empty-state">暂无记录</div>'; return; }
+            c.innerHTML = activities.slice(0, 5).map(a => `<div class="tl-item">
+                <div class="tl-dot"></div><span class="tl-text">${esc(a.label || '完成学习')}</span><span class="tl-time">${timeAgo(a.recorded_at)}</span>
+            </div>`).join('');
+        }
+
+        // ---- KPIs ----
+        function renderKPIs(analytics) {
+            const beh = analytics.learning_behavior || {};
+            const quiz = analytics.quiz_mastery || [];
+            const mastered = quiz.filter(m => m.accuracy >= 80).length;
+            const els = (id) => [document.getElementById(id)];
+            for (const el of els('kpi-streak')) if (el) el.textContent = beh.streak_days || 0;
+            for (const el of els('kpi-mastered')) if (el) el.textContent = mastered;
+            for (const el of els('kpi-minutes')) if (el) el.textContent = Math.round(beh.total_minutes || 0);
+            const total = quiz.length || 1;
+            const pct = Math.round(mastered / total * 100);
+            document.getElementById('goal-fill').style.width = pct + '%';
+            document.getElementById('goal-text').textContent = mastered + ' / ' + total + ' 知识点';
+        }
+
+        function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+        function timeAgo(t) {
+            if (!t) return '';
+            const min = Math.floor((Date.now() - new Date(t).getTime()) / 60000);
+            if (min < 1) return '刚刚'; if (min < 60) return min + '分钟前';
+            const hr = Math.floor(min / 60); if (hr < 24) return hr + '小时前';
+            return Math.floor(hr / 24) + '天前';
+        }
+
+        async function loadDashboard() {
+            try {
+                const data = await getLearningAnalytics(userId);
+                if (!data) { showDashEmpty(); return; }
+                const beh = data.learning_behavior || {};
+                hmDailyData = beh.daily_trend || [];
+                renderHeatmap();
+                renderTrendBars(beh.daily_trend || []);
+                renderProgressRings(data.quiz_mastery || []);
+                renderForgetting(data.forgetting_curve || []);
+                renderTimeline(data.recent_activities || []);
+                renderKPIs(data);
+                lucide.createIcons();
+            } catch (e) { console.error('Dashboard load failed:', e); showDashEmpty(); }
+        }
+
+        function showDashEmpty() {
+            const ids = ['trend-bars', 'progress-rings', 'forgetting-list', 'recent-list', 'heatmap-cells'];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = '<div class="empty-state">暂无数据</div>';
+            });
+            document.getElementById('heatmap-empty').style.display = '';
+            ['kpi-streak','kpi-mastered','kpi-minutes'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = '-';
+            });
+        }
+
+        registerPage('index', init, destroy);
+        init();
+    </script>
+    <script src="./assets/tracker.js"></script>
+    <script src="./assets/guide.js"></script>
+    <script type="module" src="./assets/assistant.js"></script>
+</body>
+</html>

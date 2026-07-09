@@ -1,0 +1,233 @@
+# ===========================================================
+# Golden Test Set — RAG 评估 Layer 3
+# 基于知识库实际覆盖率设计（数据来源: d2l-zh.pdf, 29365 chunks）
+# 最后更新: 2026-05-28
+# ===========================================================
+#
+# 字段说明：
+#   id:              唯一标识
+#   kp_name:          知识点名称（必须匹配 kg_node 或 chunk 中的概念）
+#   query:            自然语言查询
+#   expected_aspects: 应覆盖的知识点方面（Completeness Judge 使用）
+#   min_faithfulness: 最低忠实度期望（0.0-1.0）
+#   min_completeness: 最低完整度期望（0.0-1.0）
+#   tags:             分类标签
+#
+# 覆盖策略：
+#   - 概念定义类（definition）: 5 条
+#   - 算法原理类（algorithm）: 3 条
+#   - 架构对比类（comparison）: 4 条
+#   - 实践应用类（practice）: 3 条
+# ===========================================================
+
+queries:
+  # =========================================
+  # 概念定义类 — 测试检索精度 + 生成忠实度
+  # =========================================
+
+  - id: "gradient_descent_definition"
+    kp_name: "梯度下降"
+    query: "什么是梯度下降？它的基本原理是什么？"
+    expected_aspects:
+      - "梯度下降的定义和目标"
+      - "梯度的数学含义"
+      - "学习率的作用"
+      - "迭代更新的基本公式"
+      - "批量/随机/小批量的区别"
+    min_faithfulness: 0.70
+    min_completeness: 0.60
+    tags: ["definition", "mathematics"]
+
+  - id: "softmax_regression"
+    kp_name: "softmax回归"
+    query: "请解释softmax回归的原理，它和逻辑回归有什么关系？"
+    expected_aspects:
+      - "softmax函数的定义和数学公式"
+      - "从逻辑回归到softmax回归的推广"
+      - "交叉熵损失函数"
+      - "softmax回归的应用场景"
+      - "与线性回归的区别"
+    min_faithfulness: 0.70
+    min_completeness: 0.60
+    tags: ["definition", "mathematics"]
+
+  - id: "overfitting"
+    kp_name: "过拟合"
+    query: "什么是过拟合？在深度学习中如何识别和解决过拟合问题？"
+    expected_aspects:
+      - "过拟合的定义和表现"
+      - "训练误差与验证误差的差距"
+      - "权重衰减（L2正则化）"
+      - "Dropout方法"
+      - "早停策略"
+    min_faithfulness: 0.70
+    min_completeness: 0.60
+    tags: ["concept", "practice"]
+
+  - id: "nlp_tokenization"
+    kp_name: "自然语言处理"
+    query: "自然语言处理中，文本数据预处理有哪些关键步骤？"
+    expected_aspects:
+      - "文本分词（tokenization）"
+      - "词表构建"
+      - "词嵌入的基本概念"
+      - "n元语法模型"
+      - "文本序列的向量化表示"
+    min_faithfulness: 0.70
+    min_completeness: 0.60
+    tags: ["definition", "practice"]
+
+  - id: "image_classification"
+    kp_name: "图像分类"
+    query: "深度学习中的图像分类任务是什么？用哪些指标评估分类效果？"
+    expected_aspects:
+      - "图像分类任务的定义"
+      - "常用的评估指标（准确率、精确率、召回率）"
+      - "混淆矩阵"
+      - "ImageNet数据集的作用"
+      - "分类任务的典型流程"
+    min_faithfulness: 0.70
+    min_completeness: 0.55
+    tags: ["definition", "practice"]
+
+  # =========================================
+  # 算法原理类 — 测试检索召回 + 生成完整度
+  # =========================================
+
+  - id: "backpropagation"
+    kp_name: "反向传播"
+    query: "反向传播算法是如何工作的？请解释其计算过程和链式法则的应用。"
+    expected_aspects:
+      - "反向传播的目的"
+      - "链式法则在梯度计算中的应用"
+      - "前向传播与反向传播的关系"
+      - "计算图的构建"
+      - "自动微分的基本原理"
+    min_faithfulness: 0.70
+    min_completeness: 0.60
+    tags: ["algorithm", "mathematics"]
+
+  - id: "transformer_attention"
+    kp_name: "注意力机制"
+    query: "请解释Transformer中的多头自注意力（Multi-Head Self-Attention）机制是如何工作的。"
+    expected_aspects:
+      - "自注意力的基本概念"
+      - "Q、K、V的数学含义和计算"
+      - "缩放点积注意力"
+      - "多头注意力的并行计算"
+      - "自注意力与RNN的对比优势"
+    min_faithfulness: 0.70
+    min_completeness: 0.60
+    tags: ["algorithm", "architecture"]
+
+  - id: "lstm_gates"
+    kp_name: "长短期记忆"
+    query: "LSTM（长短期记忆网络）的门控机制是怎样的？它如何解决梯度消失问题？"
+    expected_aspects:
+      - "LSTM与普通RNN的区别"
+      - "遗忘门、输入门、输出门的作用"
+      - "细胞状态的更新机制"
+      - "梯度消失问题的解决原理"
+      - "LSTM的典型应用场景"
+    min_faithfulness: 0.70
+    min_completeness: 0.60
+    tags: ["algorithm", "architecture"]
+
+  # =========================================
+  # 架构对比类 — 测试多角度检索 + 生成覆盖度
+  # =========================================
+
+  - id: "activation_function"
+    kp_name: "激活函数"
+    query: "深度学习中有哪些常用的激活函数？ReLU、Sigmoid、Tanh各有什么优缺点？"
+    expected_aspects:
+      - "激活函数的作用和非线性需求"
+      - "ReLU的定义、优点和死神经元问题"
+      - "Sigmoid的定义、优点和梯度饱和问题"
+      - "Tanh与Sigmoid的对比"
+      - "如何根据不同场景选择激活函数"
+    min_faithfulness: 0.70
+    min_completeness: 0.60
+    tags: ["comparison", "concept"]
+
+  - id: "sgd_variants"
+    kp_name: "随机梯度下降"
+    query: "SGD、Momentum、AdaGrad、RMSProp、Adam这些优化算法有什么区别？各自适用于什么场景？"
+    expected_aspects:
+      - "SGD的基本原理和局限"
+      - "Momentum的动量机制"
+      - "AdaGrad和RMSProp的自适应学习率"
+      - "Adam如何结合动量和自适应学习率"
+      - "不同优化器的适用场景对比"
+    min_faithfulness: 0.70
+    min_completeness: 0.60
+    tags: ["comparison", "practice"]
+
+  - id: "cnn_architectures"
+    kp_name: "卷积神经网络"
+    query: "LeNet、AlexNet、VGG、GoogLeNet这些经典CNN架构各有什么特点和创新？"
+    expected_aspects:
+      - "LeNet的奠基性结构"
+      - "AlexNet引入的ReLU和Dropout"
+      - "VGG的深层堆叠设计思想"
+      - "GoogLeNet的Inception模块"
+      - "各架构的参数量和计算复杂度对比"
+    min_faithfulness: 0.70
+    min_completeness: 0.55
+    tags: ["comparison", "architecture"]
+
+  - id: "rnn_vs_lstm"
+    kp_name: "循环神经网络"
+    query: "普通RNN和LSTM有什么区别？为什么LSTM在长序列任务上表现更好？"
+    expected_aspects:
+      - "RNN的基本循环结构和BPTT算法"
+      - "RNN的梯度消失/爆炸问题"
+      - "LSTM的门控机制概述"
+      - "两者在长序列任务上的性能差异"
+      - "GRU作为简化的LSTM变体"
+    min_faithfulness: 0.70
+    min_completeness: 0.55
+    tags: ["comparison", "algorithm"]
+
+  # =========================================
+  # 实践应用类 — 测试生成完整性 + 实用性
+  # =========================================
+
+  - id: "dropout_technique"
+    kp_name: "Dropout"
+    query: "Dropout在深度学习中的作用是什么？训练和推理阶段有什么不同？"
+    expected_aspects:
+      - "Dropout的定义和动机（防止过拟合）"
+      - "训练时随机丢弃神经元"
+      - "推理时的不丢弃和期望保持"
+      - "Dropout概率的选择"
+      - "Dropout与其他正则化方法的对比"
+    min_faithfulness: 0.70
+    min_completeness: 0.60
+    tags: ["technique", "practice"]
+
+  - id: "weight_decay"
+    kp_name: "权重衰减"
+    query: "什么是权重衰减？它和L2正则化有什么关系？在优化器中如何实现？"
+    expected_aspects:
+      - "权重衰减的定义和目的"
+      - "权重衰减与L2正则化的等价关系"
+      - "SGD中权重衰减的实现"
+      - "Adam中权重衰减的特殊处理（AdamW）"
+      - "权重衰减系数的选择"
+    min_faithfulness: 0.70
+    min_completeness: 0.60
+    tags: ["technique", "mathematics"]
+
+  - id: "bert_pretrain"
+    kp_name: "BERT"
+    query: "BERT模型的预训练任务是什么？微调阶段如何适应不同的NLP任务？"
+    expected_aspects:
+      - "BERT的整体架构（双向Transformer编码器）"
+      - "掩码语言模型（MLM）预训练任务"
+      - "下一句预测（NSP）任务"
+      - "BERT微调的方法"
+      - "BERT在不同NLP任务上的应用"
+    min_faithfulness: 0.70
+    min_completeness: 0.55
+    tags: ["architecture", "practice"]

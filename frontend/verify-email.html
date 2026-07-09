@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>邮箱验证 - 个性化学习助手</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #F7F8FC;
+            color: #1E1E2E;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            width: 420px;
+            background: #fff;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+        .icon { font-size: 64px; margin-bottom: 20px; }
+        .icon.success { color: #10B981; }
+        .icon.error { color: #EF4444; }
+        .icon.pending { color: #F59E0B; }
+        h1 { font-size: 22px; color: #1E1E2E; margin-bottom: 12px; }
+        p { font-size: 15px; color: #4B5563; line-height: 1.6; margin-bottom: 24px; }
+        .btn {
+            display: inline-block; padding: 12px 32px; background: #4F6EF7; color: #fff;
+            border: none; border-radius: 8px; font-size: 15px; font-weight: 600;
+            text-decoration: none; cursor: pointer; transition: background 0.2s;
+        }
+        .btn:hover { background: #3B5DE7; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div id="statusIcon" class="icon pending">&#8987;</div>
+    <h1 id="statusTitle">验证中...</h1>
+    <p id="statusMsg">正在验证您的邮箱地址，请稍候</p>
+    <a href="/app/auth.html" class="btn" id="actionBtn" style="display:none;">前往登录</a>
+</div>
+
+<script>
+(async function() {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const status = params.get('status'); // 来自后端重定向
+
+    const icon = document.getElementById('statusIcon');
+    const title = document.getElementById('statusTitle');
+    const msg = document.getElementById('statusMsg');
+    const btn = document.getElementById('actionBtn');
+
+    if (status === 'success') {
+        icon.className = 'icon success';
+        icon.textContent = '\u2714';
+        title.textContent = '验证成功';
+        msg.textContent = '您的邮箱已验证成功！现在可以登录了。';
+        btn.style.display = 'inline-block';
+        return;
+    }
+
+    if (!token) {
+        icon.className = 'icon error';
+        icon.textContent = '\u2718';
+        title.textContent = '无效链接';
+        msg.textContent = '缺少验证 token，请检查邮件链接是否完整。';
+        btn.style.display = 'inline-block';
+        return;
+    }
+
+    try {
+        const res = await fetch(`/auth/verify-email?token=${encodeURIComponent(token)}`);
+        // 后端返回 302 重定向，所以 fetch 会跟进，或者返回 JSON
+        if (res.redirected) {
+            icon.className = 'icon success';
+            icon.textContent = '\u2714';
+            title.textContent = '验证成功';
+            msg.textContent = '您的邮箱已验证成功！现在可以登录了。';
+            btn.style.display = 'inline-block';
+            return;
+        }
+        const data = await res.json();
+        if (res.ok) {
+            icon.className = 'icon success';
+            icon.textContent = '\u2714';
+            title.textContent = '验证成功';
+            msg.textContent = data.message || '您的邮箱已验证成功！';
+            btn.style.display = 'inline-block';
+        } else {
+            icon.className = 'icon error';
+            icon.textContent = '\u2718';
+            title.textContent = '验证失败';
+            msg.textContent = data.detail || '验证链接无效或已过期。';
+            btn.style.display = 'inline-block';
+        }
+    } catch (err) {
+        // 如果 fetch 跟随了重定向，可能返回的是 HTML
+        icon.className = 'icon error';
+        icon.textContent = '\u2718';
+        title.textContent = '验证失败';
+        msg.textContent = '网络错误或链接无效，请稍后重试。';
+        btn.style.display = 'inline-block';
+    }
+})();
+</script>
+</body>
+</html>

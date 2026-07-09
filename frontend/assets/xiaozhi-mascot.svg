@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 269 269"
+     width="269" height="269"
+     fill="none"
+     role="img"
+     aria-label="小知 · 同心圆光环之眼">
+  <defs>
+    <!-- 暖色光晕（外橙圈外发光） -->
+    <filter id="xz-f-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feMorphology in="SourceAlpha" operator="dilate" radius="6" result="dilated"/>
+      <feGaussianBlur in="dilated" stdDeviation="15" result="blurred"/>
+      <feColorMatrix in="blurred" type="matrix"
+                     values="0 0 0 0 0.937255
+                             0 0 0 0 0.823529
+                             0 0 0 0 0.701961
+                             0 0 0 1 0"
+                     result="orangeGlow"/>
+      <feMerge>
+        <feMergeNode in="orangeGlow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- 高光柔化 -->
+    <filter id="xz-f-blur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2"/>
+    </filter>
+  </defs>
+
+  <!-- ── Layer 1: 外橙光环 ── -->
+  <g filter="url(#xz-f-glow)">
+    <circle cx="134.5" cy="134.5" r="98.5" fill="#D89856"/>
+  </g>
+
+  <!-- ── Layer 2: 旋转的四芒星 + 圆（6s/周匀速） ──
+       Vector 路径自身 viewBox 是 176×176, 中心 ≈ (88, 88)。
+       translate(46.5, 46.5) 让中心对齐眼眶中心 (134.5, 134.5)。
+       animateTransform 围绕 (88, 88) 自转，等价于围绕 (134.5, 134.5)。 -->
+  <g transform="translate(46.5, 46.5)">
+    <g>
+      <animateTransform attributeName="transform"
+                        type="rotate"
+                        from="0 88 88"
+                        to="360 88 88"
+                        dur="6s"
+                        repeatCount="indefinite"/>
+      <path d="M75.0505 0.883813C75.8138 -0.107768 77.2364 -0.29285 78.2279 0.470422L175.116 75.0505C176.108 75.8138 176.293 77.2364 175.53 78.2279L100.95 175.116C100.186 176.108 98.7636 176.293 97.772 175.53L0.883813 100.95C-0.107768 100.186 -0.29285 98.7636 0.470422 97.772L75.0505 0.883813Z"
+            fill="#5C3616"/>
+      <path d="M162.221 86.8853C162.221 128.492 128.746 162.221 87.4517 162.221C46.158 162.221 12.6828 128.492 12.6828 86.8853C12.6828 45.2787 46.158 11.5499 87.4517 11.5499C128.746 11.5499 162.221 45.2787 162.221 86.8853Z"
+            fill="#5C3616"/>
+    </g>
+  </g>
+
+  <!-- ── Layer 3: 眼球（巩膜 / 虹膜外环 / 虹膜内环 / 瞳孔 / 高光） ── -->
+  <circle cx="134.5" cy="134.5" r="57.5" fill="#FAF8F5"/>
+  <circle cx="134.5" cy="134.5" r="37.5" fill="#F6E8D8"/>
+  <circle cx="134.5" cy="134.5" r="25.15"
+          fill="#C77B3C" fill-opacity="0.75"
+          stroke="#FFFFFF" stroke-width="0.7"/>
+  <path d="M134.5 120.1C142.453 120.1 148.9 126.547 148.9 134.5C148.9 142.453 142.453 148.9 134.5 148.9C126.547 148.9 120.1 142.453 120.1 134.5C120.1 126.547 126.547 120.1 134.5 120.1Z"
+        fill="#A8652E" stroke="#FFFFFF" stroke-width="0.2"/>
+  <g filter="url(#xz-f-blur)">
+    <circle cx="155.5" cy="155.5" r="16.5" fill="#FFFFFF"/>
+  </g>
+
+  <!-- ── Layer 4: 眨眼（3.09s/周期，open 2800ms → half 90ms → closed 110ms → half 90ms） ──
+       离散切换 opacity 来再现原型的三帧序列。 -->
+  <!-- half lid -->
+  <path d="M135.368 58C173.477 58 204.947 86.4235 209.736 123.228C187.146 127.572 161.945 130 135.368 130C108.791 130 83.5907 127.572 61 123.228C65.7891 86.4235 97.2589 58 135.368 58Z"
+        fill="#5C3616" opacity="0">
+    <animate attributeName="opacity"
+             values="0;1;0;1;0"
+             keyTimes="0;0.9061;0.9353;0.9709;1"
+             dur="3.09s"
+             calcMode="discrete"
+             repeatCount="indefinite"/>
+  </path>
+  <!-- closed lid -->
+  <path d="M134.965 65C175.623 65 208.722 97.3523 209.929 137.718C192.765 160.368 165.575 175 134.965 175C104.355 175 77.1636 160.368 60 137.718C61.2064 97.3523 94.307 65 134.965 65Z"
+        fill="#5C3616" opacity="0">
+    <animate attributeName="opacity"
+             values="0;0;1;0;0"
+             keyTimes="0;0.9061;0.9353;0.9709;1"
+             dur="3.09s"
+             calcMode="discrete"
+             repeatCount="indefinite"/>
+  </path>
+</svg>

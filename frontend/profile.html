@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
+    <title>个人中心 · 智学工坊</title>
+    <script src="https://unpkg.com/lucide@0.460.0"></script>
+    <link rel="stylesheet" href="./assets/styles-v4.css">
+    <link rel="stylesheet" href="./assets/assistant.css">
+    <style>
+
+        /* Section card */
+        .section-card {
+            background: #fff; border: 1px solid var(--divider);
+            border-radius: var(--r-lg); padding: 24px; margin-bottom: 16px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .section-head {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 18px; padding-bottom: 12px;
+            border-bottom: 1px solid var(--divider);
+        }
+        .section-head .ico {
+            width: 30px; height: 30px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--accent-soft); color: var(--accent);
+            flex-shrink: 0;
+        }
+        .section-head .ico i { width: 16px; height: 16px; }
+        .section-head h3 { font-family: var(--display); font-size: 15px; font-weight: 700; color: var(--text-1); margin: 0; }
+        .section-head .sub { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+
+        /* Account info rows */
+        .info-row {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 0;
+        }
+        .info-row + .info-row { border-top: 1px solid rgba(120,90,60,0.06); }
+        .info-label { width: 72px; flex-shrink: 0; font-size: 13px; color: var(--text-3); font-weight: 500; }
+        .info-value { flex: 1; font-size: 14px; color: var(--text-1); font-weight: 500; }
+        .info-value.muted { color: var(--text-3); font-size: 13px; }
+
+        /* Form */
+        .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+        .form-full { grid-column: 1 / -1; }
+        .form-actions {
+            display: flex; gap: 10px; justify-content: flex-end;
+            padding-top: 14px; border-top: 1px solid var(--divider);
+            margin-top: 14px;
+        }
+
+        /* Tag input */
+        .tag-container {
+            display: flex; flex-wrap: wrap; gap: 6px;
+            padding: 6px 8px; min-height: 36px;
+            background: #fff; border: 1px solid var(--border);
+            border-radius: var(--r-md); transition: all 0.2s; cursor: text;
+        }
+        .tag-container:focus-within {
+            border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+        .pro-tag {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 8px; background: var(--accent-soft);
+            color: #A8743C; font-size: 12px; border-radius: 8px; font-weight: 500;
+        }
+        .tag-remove {
+            cursor: pointer; display: flex; align-items: center;
+            width: 14px; height: 14px; border-radius: 50%;
+            background: rgba(168,116,60,0.18); color: #A8743C;
+            font-size: 11px; line-height: 1; justify-content: center;
+            transition: all 0.15s;
+        }
+        .tag-remove:hover { background: var(--danger); color: #fff; }
+        .tag-input-inline {
+            border: none; outline: none; background: transparent;
+            font-size: 12px; flex: 1; min-width: 80px;
+            font-family: var(--font); color: var(--text-1); padding: 2px 4px;
+        }
+
+        @media (max-width: 640px) {
+            .section-card { padding: 16px; }
+            .form-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="view">
+<div class="app-layout">
+<div class="app-content">
+<div class="app-body">
+
+    <h1 class="page-title fade-up d1">个人中心</h1>
+
+    <div class="tab-bar fade-up d2">
+        <button class="tab-btn active" data-tab="account">账号安全</button>
+        <button class="tab-btn" data-tab="profile">学习画像</button>
+    </div>
+
+    <!-- Tab: 账号安全 -->
+    <div id="tab-account" class="fade-up d2">
+        <div class="section-card">
+            <div class="section-head">
+                <div class="ico"><i data-lucide="shield-check"></i></div>
+                <div>
+                    <h3>账号安全</h3>
+                    <div class="sub">管理你的登录方式和账号信息</div>
+                </div>
+            </div>
+            <div class="info-row">
+                <span class="info-label">用户名</span>
+                <span class="info-value" id="acct-username">-</span>
+                <input type="text" class="form-input" id="acct-username-input" style="display:none;width:180px;padding:4px 8px;font-size:13px;" maxlength="64">
+            </div>
+            <div class="info-row">
+                <span class="info-label">邮箱</span>
+                <span class="info-value" id="acct-email">-</span>
+                <input type="email" class="form-input" id="acct-email-input" style="display:none;width:220px;padding:4px 8px;font-size:13px;" maxlength="256">
+            </div>
+            <div class="info-row">
+                <span class="info-label">密码</span>
+                <span class="info-value muted">********</span>
+            </div>
+            <div class="info-row" id="acct-edit-row">
+                <button class="btn btn-ghost btn-sm" id="btn-edit-account">
+                    <i data-lucide="pencil" style="width:12px;height:12px;"></i> 编辑资料
+                </button>
+                <span id="acct-save-group" style="display:none;gap:8px;">
+                    <button class="btn btn-primary btn-sm" id="btn-save-account">保存</button>
+                    <button class="btn btn-ghost btn-sm" id="btn-cancel-account">取消</button>
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">注册时间</span>
+                <span class="info-value muted" id="acct-created">-</span>
+            </div>
+            <div style="padding-top: 14px; border-top: 1px solid var(--divider); margin-top: 6px;">
+                <button class="btn btn-danger btn-sm" id="btn-logout">
+                    <i data-lucide="log-out" style="width:12px;height:12px;"></i> 登出账号
+                </button>
+            </div>
+        </div>
+
+        <!-- 危险区域：注销账号 -->
+        <div class="section-card" style="border:1px solid rgba(220,38,38,0.35);margin-top:16px;">
+            <div class="section-head">
+                <div class="ico" style="background:rgba(220,38,38,0.1);"><i data-lucide="alert-triangle" style="color:var(--danger);"></i></div>
+                <div>
+                    <h3 style="color:var(--danger);">危险区域</h3>
+                    <div class="sub">注销账号将永久删除你的账户及所有学习数据，此操作不可恢复</div>
+                </div>
+            </div>
+            <div style="padding-top: 6px;">
+                <button class="btn btn-danger btn-sm" id="btn-delete-account">
+                    <i data-lucide="trash-2" style="width:12px;height:12px;"></i> 注销账号
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 注销账号确认弹窗 -->
+    <div id="delete-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.45);align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:16px;padding:28px;max-width:420px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.18);display:flex;flex-direction:column;gap:14px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <i data-lucide="alert-triangle" style="width:24px;height:24px;color:var(--danger);"></i>
+                <span style="font-size:17px;font-weight:600;color:#1E1E2E;">确认注销账号</span>
+            </div>
+            <div style="font-size:13px;color:#555;line-height:1.6;">
+                此操作将<strong style="color:var(--danger);">永久删除</strong>你的账号、学习画像、对话记录、生成的全部资源、测验记录、学习路径等所有数据，且<strong>无法恢复</strong>。<br>
+                请输入你的<strong>用户名</strong>和<strong>密码</strong>以确认。
+            </div>
+            <div class="form-group">
+                <label class="form-label">用户名</label>
+                <input type="text" class="form-input" id="del-username" placeholder="请输入当前用户名" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label class="form-label">密码</label>
+                <input type="password" class="form-input" id="del-password" placeholder="请输入登录密码" autocomplete="off">
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px;">
+                <button class="btn btn-ghost btn-sm" id="btn-del-cancel">取消</button>
+                <button class="btn btn-danger btn-sm" id="btn-del-confirm">确认注销</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: 学习画像 -->
+    <div id="tab-profile" class="fade-up d2" style="display:none;">
+        <div class="section-card">
+            <div class="section-head">
+                <div class="ico"><i data-lucide="user-pen"></i></div>
+                <div>
+                    <h3>学习画像</h3>
+                    <div class="sub">完善个人信息以获得更好的学习体验</div>
+                </div>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">专业</label>
+                    <input type="text" class="form-input" id="pf-major" placeholder="请输入专业">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">每日学习时间</label>
+                    <select class="form-select" id="pf-daily-time">
+                        <option value="">未设置</option>
+                        <option value="30">30 分钟</option>
+                        <option value="60">60 分钟</option>
+                        <option value="90">90 分钟</option>
+                        <option value="120">120 分钟</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">认知风格</label>
+                    <select class="form-select" id="pf-cognitive">
+                        <option value="">未设置</option>
+                        <option value="视觉型">视觉型</option>
+                        <option value="听觉型">听觉型</option>
+                        <option value="阅读型">阅读型</option>
+                        <option value="动手型">动手型</option>
+                    </select>
+                </div>
+                <div class="form-group form-full">
+                    <label class="form-label">学习目标</label>
+                    <textarea class="form-textarea" id="pf-goal" placeholder="请输入学习目标"></textarea>
+                </div>
+                <div class="form-group form-full">
+                    <label class="form-label">已掌握知识点</label>
+                    <div class="tag-container" id="tag-mastered" data-field="knowledge_mastered">
+                        <input class="tag-input-inline" placeholder="输入后按回车添加">
+                    </div>
+                </div>
+                <div class="form-group form-full">
+                    <label class="form-label">薄弱知识点</label>
+                    <div class="tag-container" id="tag-weak" data-field="knowledge_weak">
+                        <input class="tag-input-inline" placeholder="输入后按回车添加">
+                    </div>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-primary" id="btn-save-profile">
+                    <i data-lucide="save" style="width:14px;height:14px;"></i> 保存修改
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+</div>
+</div>
+
+<script type="module">
+    import { showToast } from './assets/toast.js';
+    import { registerPage, initSidebar } from './assets/nav.js';
+    import { isLoggedIn, getUserId, clearAuth, getProfile, updateProfile, getLearningAnalytics, updateAccount, getUser, deleteAccount } from './assets/api.js?v=2';
+
+    if (!isLoggedIn()) { window.location.href = 'auth.html'; }
+    const userId = getUserId();
+
+    let profileData = null;
+    let tagData = { knowledge_mastered: [], knowledge_weak: [] };
+
+    function initTagInput(containerId) {
+        const container = document.getElementById(containerId);
+        const field = container.dataset.field;
+        const input = container.querySelector('.tag-input-inline');
+
+        function renderTags() {
+            const existing = container.querySelectorAll('.pro-tag');
+            existing.forEach(t => t.remove());
+            const items = tagData[field] || [];
+            items.forEach((val, idx) => {
+                const tag = document.createElement('span');
+                tag.className = 'pro-tag';
+                tag.innerHTML = escHtml(val) + '<span class="tag-remove" data-idx="' + idx + '">&times;</span>';
+                container.insertBefore(tag, input);
+            });
+        }
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const val = input.value.trim();
+                if (val && !tagData[field].includes(val)) {
+                    tagData[field].push(val);
+                    renderTags();
+                }
+                input.value = '';
+            }
+            if (e.key === 'Backspace' && !input.value && tagData[field].length) {
+                tagData[field].pop();
+                renderTags();
+            }
+        });
+
+        container.addEventListener('click', (e) => {
+            if (e.target.classList.contains('tag-remove')) {
+                const idx = parseInt(e.target.dataset.idx);
+                tagData[field].splice(idx, 1);
+                renderTags();
+            } else {
+                input.focus();
+            }
+        });
+
+        container._renderTags = renderTags;
+    }
+
+    function fillProfileForm(profile) {
+        if (!profile) return;
+        document.getElementById('pf-major').value = profile.major || '';
+        document.getElementById('pf-daily-time').value = profile.daily_time_minutes ? String(profile.daily_time_minutes) : '';
+        document.getElementById('pf-cognitive').value = profile.cognitive_style || '';
+        document.getElementById('pf-goal').value = profile.learning_goal || '';
+        tagData.knowledge_mastered = [...(profile.knowledge_mastered || [])];
+        tagData.knowledge_weak = [...(profile.knowledge_weak || [])];
+        document.getElementById('tag-mastered')._renderTags();
+        document.getElementById('tag-weak')._renderTags();
+    }
+
+    function fillAccount(profile) {
+        if (!profile) return;
+        const username = profile.username || '';
+        const email = profile.email || '';
+        document.getElementById('acct-username').textContent = username || userId || '-';
+        document.getElementById('acct-email').textContent = email || '未绑定';
+        document.getElementById('acct-username-input').value = username;
+        document.getElementById('acct-email-input').value = email;
+        document.getElementById('acct-created').textContent = profile.created_at
+            ? new Date(profile.created_at).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+            : '-';
+    }
+
+    function enterEditMode() {
+        const username = document.getElementById('acct-username').textContent;
+        const emailRaw = document.getElementById('acct-email').textContent;
+        document.getElementById('acct-username-input').value = username === '-' ? '' : username;
+        document.getElementById('acct-email-input').value = emailRaw === '未绑定' ? '' : emailRaw;
+        document.getElementById('acct-username').style.display = 'none';
+        document.getElementById('acct-email').style.display = 'none';
+        document.getElementById('acct-username-input').style.display = '';
+        document.getElementById('acct-email-input').style.display = '';
+        document.getElementById('btn-edit-account').style.display = 'none';
+        document.getElementById('acct-save-group').style.display = 'flex';
+    }
+
+    function exitEditMode() {
+        document.getElementById('acct-username').style.display = '';
+        document.getElementById('acct-email').style.display = '';
+        document.getElementById('acct-username-input').style.display = 'none';
+        document.getElementById('acct-email-input').style.display = 'none';
+        document.getElementById('btn-edit-account').style.display = '';
+        document.getElementById('acct-save-group').style.display = 'none';
+    }
+
+    async function handleSaveAccount() {
+        const newUsername = document.getElementById('acct-username-input').value.trim();
+        const newEmail = document.getElementById('acct-email-input').value.trim();
+        const data = {};
+        if (newUsername) data.username = newUsername;
+        data.email = newEmail; // empty string → null on backend
+        if (!data.username) {
+            showToast('用户名不能为空', 'error');
+            return;
+        }
+        const btn = document.getElementById('btn-save-account');
+        btn.disabled = true;
+        btn.textContent = '保存中...';
+        try {
+            const updated = await updateAccount(userId, data);
+            // Update display
+            document.getElementById('acct-username').textContent = updated.username;
+            document.getElementById('acct-email').textContent = updated.email || '未绑定';
+            showToast('账号信息已更新', 'success');
+            exitEditMode();
+        } catch (e) {
+            showToast(e.message || '更新失败', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '保存';
+        }
+    }
+
+    function escHtml(s) {
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    async function handleSave() {
+        const dailyTimeVal = document.getElementById('pf-daily-time').value;
+        const data = {
+            major: document.getElementById('pf-major').value.trim(),
+            daily_time_minutes: dailyTimeVal ? parseInt(dailyTimeVal) : null,
+            cognitive_style: document.getElementById('pf-cognitive').value || null,
+            learning_goal: document.getElementById('pf-goal').value.trim(),
+            knowledge_mastered: tagData.knowledge_mastered,
+            knowledge_weak: tagData.knowledge_weak,
+        };
+        const btn = document.getElementById('btn-save-profile');
+        btn.disabled = true;
+        btn.innerHTML = '<i data-lucide="loader" style="width:14px;height:14px;"></i> 保存中...';
+        lucide.createIcons();
+        try {
+            const updated = await updateProfile(userId, data);
+            showToast('保存成功', 'success');
+            profileData = updated || data;
+            fillAccount(profileData);
+        } catch (e) {
+            showToast('保存失败，请稍后重试', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="save" style="width:14px;height:14px;"></i> 保存修改';
+            lucide.createIcons();
+        }
+    }
+
+    function showWip() { showToast('功能开发中，敬请期待', 'info'); }
+
+    function handleLogout() {
+        clearAuth();
+        window.location.href = 'auth.html';
+    }
+
+    function openDeleteModal() {
+        document.getElementById('del-username').value = '';
+        document.getElementById('del-password').value = '';
+        document.getElementById('delete-modal').style.display = 'flex';
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('delete-modal').style.display = 'none';
+    }
+
+    async function handleConfirmDelete() {
+        const username = document.getElementById('del-username').value.trim();
+        const password = document.getElementById('del-password').value;
+        if (!username || !password) {
+            showToast('请输入用户名和密码', 'error');
+            return;
+        }
+        const btn = document.getElementById('btn-del-confirm');
+        btn.disabled = true;
+        btn.textContent = '注销中...';
+        try {
+            await deleteAccount(userId, username, password);
+            showToast('账号已注销', 'success');
+            clearAuth();
+            setTimeout(() => { window.location.href = 'auth.html'; }, 800);
+        } catch (e) {
+            showToast(e.message?.replace(/^API \d+: /, '') || '注销失败', 'error');
+            btn.disabled = false;
+            btn.textContent = '确认注销';
+        }
+    }
+
+    function on(id, event, fn) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener(event, fn);
+    }
+
+    async function init() {
+        initTagInput('tag-mastered');
+        initTagInput('tag-weak');
+
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                const tab = this.dataset.tab;
+                document.getElementById('tab-account').style.display = tab === 'account' ? '' : 'none';
+                document.getElementById('tab-profile').style.display = tab === 'profile' ? '' : 'none';
+            });
+        });
+
+        on('btn-save-profile', 'click', handleSave);
+        on('btn-edit-account', 'click', enterEditMode);
+        on('btn-save-account', 'click', handleSaveAccount);
+        on('btn-cancel-account', 'click', exitEditMode);
+        on('btn-logout', 'click', handleLogout);
+        on('btn-delete-account', 'click', openDeleteModal);
+        on('btn-del-cancel', 'click', closeDeleteModal);
+        on('btn-del-confirm', 'click', handleConfirmDelete);
+
+        try {
+            const [profile, analytics, user] = await Promise.all([
+                getProfile(userId),
+                getLearningAnalytics(userId),
+                getUser(userId),
+            ]);
+            profileData = profile;
+            fillAccount(user);
+            fillProfileForm(profile);
+            lucide.createIcons();
+        } catch (e) {
+            console.error('Profile init failed:', e);
+            document.getElementById('acct-username').textContent = '加载失败';
+        }
+    }
+
+    function destroy() {
+        profileData = null;
+        tagData = { knowledge_mastered: [], knowledge_weak: [] };
+    }
+
+    registerPage('profile', init, destroy);
+    initSidebar('profile');
+    init();
+</script>
+<script src="./assets/tracker.js"></script>
+<script type="module" src="./assets/assistant.js"></script>
+</body>
+</html>

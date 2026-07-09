@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
+    <title>登录 / 注册 · 智学工坊</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <script src="https://unpkg.com/lucide@0.460.0"></script>
+    <link rel="stylesheet" href="./assets/styles-v4.css">
+    <style>
+        body { display: flex; align-items: center; justify-content: center; padding: 32px; }
+
+        .auth-card {
+            width: 420px; max-width: 100%;
+            background: #fff; border-radius: var(--r-lg);
+            box-shadow: var(--shadow-lg); border: 1px solid var(--divider);
+            padding: 40px;
+        }
+
+        .auth-logo { text-align: center; margin-bottom: 28px; }
+        .auth-mark {
+            width: 56px; height: 56px; margin: 0 auto 16px;
+            border-radius: 14px;
+            background: var(--accent);
+            display: grid; place-items: center;
+            color: #fff;
+        }
+        .auth-mark i { width: 26px; height: 26px; }
+        .auth-logo h1 { font-family: var(--display); font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+        .auth-logo p { font-size: 13px; color: var(--text-3); margin-top: 6px; }
+
+
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 13px; font-weight: 500; color: var(--text-2); margin-bottom: 6px; }
+
+        .btn-submit {
+            width: 100%; height: 46px; margin-top: 8px;
+            background: var(--accent); color: #fff; border: none;
+            border-radius: var(--r-md); font-size: 15px; font-weight: 600;
+            font-family: inherit; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-submit:hover { background: var(--accent-hover); box-shadow: 0 4px 14px rgba(199,123,60,0.28); }
+        .btn-submit:active { transform: scale(0.97); }
+        .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .alert {
+            padding: 12px 15px; border-radius: var(--r-sm);
+            font-size: 13px; margin-bottom: 18px; display: none; border: 1px solid;
+        }
+        .alert-success { background: var(--success-soft); border-color: rgba(110,148,102,0.30); color: #4F6F47; }
+        .alert-danger  { background: var(--danger-soft);  border-color: rgba(201,96,90,0.30);  color: #A8423C; }
+
+        .spinner {
+            display: inline-block; width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff;
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+            vertical-align: middle; margin-right: 6px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="auth-card">
+        <div class="auth-logo">
+            <div class="auth-mark"><i data-lucide="atom"></i></div>
+            <h1>智学工坊</h1>
+            <p>个性化资源生成与学习多智能体系统</p>
+        </div>
+
+        <div id="alert-box" class="alert"></div>
+
+        <div class="tab-bar">
+            <button class="tab-btn active" id="tab-login" onclick="switchTab('login')">登录</button>
+            <button class="tab-btn" id="tab-register" onclick="switchTab('register')">注册</button>
+        </div>
+
+        <div id="login-form">
+            <div class="form-group">
+                <label class="form-label">用户名</label>
+                <input type="text" id="login-username" class="form-input" placeholder="请输入用户名" autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label class="form-label">密码</label>
+                <input type="password" id="login-password" class="form-input" placeholder="请输入密码" autocomplete="current-password">
+            </div>
+            <button class="btn-submit" id="login-btn" onclick="handleLogin()">登录</button>
+            <div style="text-align: center; margin-top: 14px;">
+                <a href="forgot-password.html" style="font-size:13px; color:var(--accent);">忘记密码？</a>
+            </div>
+        </div>
+
+        <div id="register-form" style="display:none;">
+            <div class="form-group">
+                <label class="form-label">用户名</label>
+                <input type="text" id="reg-username" class="form-input" placeholder="请输入用户名（3-20字符）" autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label class="form-label">邮箱（可选）</label>
+                <input type="email" id="reg-email" class="form-input" placeholder="请输入邮箱地址" autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label class="form-label">密码</label>
+                <input type="password" id="reg-password" class="form-input" placeholder="请输入密码（至少6字符）" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+                <label class="form-label">确认密码</label>
+                <input type="password" id="reg-password-confirm" class="form-input" placeholder="请再次输入密码" autocomplete="new-password">
+            </div>
+            <button class="btn-submit" id="register-btn" onclick="handleRegister()">注册</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { authLogin, authRegister, isLoggedIn } from './assets/api.js';
+
+        if (isLoggedIn()) { window.location.href = 'index.html'; }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
+            document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
+            hideAlert();
+        }
+
+        function showAlert(message, type = 'danger') {
+            const box = document.getElementById('alert-box');
+            box.className = `alert alert-${type}`;
+            box.textContent = message;
+            box.style.display = 'block';
+        }
+
+        function hideAlert() { document.getElementById('alert-box').style.display = 'none'; }
+
+        function setLoading(btn, loading) {
+            btn.disabled = loading;
+            btn.innerHTML = loading ? '<span class="spinner"></span>处理中...' : (btn.id === 'login-btn' ? '登录' : '注册');
+        }
+
+        async function handleLogin() {
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value;
+            const btn = document.getElementById('login-btn');
+            if (!username || !password) { showAlert('请填写用户名和密码'); return; }
+            setLoading(btn, true);
+            try {
+                const result = await authLogin(username, password);
+                if (result && result.user_id) {
+                    sessionStorage.removeItem('softbei_daily_shown');
+                    window.location.href = 'index.html';
+                } else {
+                    showAlert('登录失败，请检查用户名和密码');
+                }
+            } catch (e) { showAlert('网络异常，请稍后重试'); }
+            finally { setLoading(btn, false); }
+        }
+
+        async function handleRegister() {
+            const username = document.getElementById('reg-username').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            const password = document.getElementById('reg-password').value;
+            const passwordConfirm = document.getElementById('reg-password-confirm').value;
+            const btn = document.getElementById('register-btn');
+            if (!username || !password) { showAlert('请填写用户名和密码'); return; }
+            if (username.length < 3 || username.length > 20) { showAlert('用户名需为 3-20 个字符'); return; }
+            if (password.length < 6) { showAlert('密码至少需要 6 个字符'); return; }
+            if (password !== passwordConfirm) { showAlert('两次输入的密码不一致'); return; }
+            setLoading(btn, true);
+            try {
+                const resp = await authRegister(username, password, email || null);
+                if (resp && resp.id) {
+                    showAlert('注册成功！请登录。', 'success');
+                    switchTab('login');
+                    document.getElementById('login-username').value = username;
+                    document.getElementById('login-password').value = '';
+                    document.getElementById('reg-email').value = '';
+                    document.getElementById('reg-password').value = '';
+                    document.getElementById('reg-password-confirm').value = '';
+                } else {
+                    showAlert(resp?.detail || '注册失败');
+                }
+            } catch (e) { showAlert('网络异常，请稍后重试'); }
+            finally { setLoading(btn, false); }
+        }
+
+        document.getElementById('login-password').addEventListener('keypress', e => { if (e.key === 'Enter') handleLogin(); });
+        document.getElementById('reg-password-confirm').addEventListener('keypress', e => { if (e.key === 'Enter') handleRegister(); });
+
+        window.switchTab = switchTab;
+        window.handleLogin = handleLogin;
+        window.handleRegister = handleRegister;
+    </script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

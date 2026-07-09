@@ -1,0 +1,390 @@
+# ============================================================
+# 项目配置文件
+# 所有值通过 backend/config.py 加载为 Config 单例
+# 支持 ${ENV_VAR} 语法从环境变量读取敏感值
+# ============================================================
+
+# ----------------------------------------------------------
+# 数据库配置 — PostgreSQL + asyncpg
+# 连接池详细文档：docs/DATABASE_CONNECTION_POOL.md
+# ----------------------------------------------------------
+database:
+  url: "${DATABASE_URL}"               # 连接串，格式: postgresql+asyncpg://user:pass@host:5432/dbname
+  echo: false                          # true=打印所有 SQL 到标准输出（仅调试用）
+
+  # -- 连接池参数 --
+  pool_size: 10                        # 常驻连接数，按需懒加载
+  max_overflow: 20                     # pool_size 全部占用时可额外创建数，峰值 = pool_size + max_overflow = 30
+  pool_timeout: 30                     # 连接池耗尽时等待可用连接的最大秒数
+  pool_recycle: 3600                   # 单个连接最大存活秒数（1小时），超时自动回收防止服务端断开
+  command_timeout: 60                  # asyncpg 语句级超时（秒），单条 SQL 超过此值自动取消
+
+  # 注：pool_pre_ping=True 已在代码中硬编码开启（每次获取连接前 SELECT 1 探活）
+
+# ----------------------------------------------------------
+# 向量库配置 — PostgreSQL + pgvector 扩展
+# ----------------------------------------------------------
+vector_db:
+  collection: "knowledge_base"          # 向量集合名称，对应 document_chunk 表的 collection_name 字段
+  hnsw_ef_search: 100                   # HNSW 检索精度（越大越精确但越慢，40=快速 100=高精度 200=极高精度）
+
+# ----------------------------------------------------------
+# LLM 配置 — 大语言模型调用参数
+# 当前使用 DashScope（阿里云）qwen3.5 系列
+# ----------------------------------------------------------
+llm:
+  api_key: "${LLM_API_KEY}"
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  # model: "qwen3.6-flash-2026-04-16"
+  model: "qwen3.5-plus-2026-04-20"
+  provider: "qwen"
+  default_max_tokens: 2048       # 默认最大输出 token 数
+  enable_thinking: false          # Qwen3 系列深度思考开关；true=启用（高质量但慢），false=关闭（低延迟）；非 Qwen3 模型请设为 null 跳过该参数
+
+  # -- 重试策略 — 指数退避 --
+  retry:
+    max_attempts: 5                      # 最大重试次数（含首次调用）
+    backoff_multiplier: 2                # 退避乘数：等待秒数 = min(backoff_min × multiplier^attempt, backoff_max)
+    backoff_min_seconds: 3               # 最小退避间隔（秒）
+    backoff_max_seconds: 30              # 最大退避间隔（秒）
+
+  # -- HTTP 超时（秒）-- 控制 httpx 底层请求的各阶段超时
+  timeout:
+    connect: 10                          # TCP 连接建立超时
+    read: 120                            # 响应读取超时（生成类任务需较大值）
+    write: 30                            # 请求写入超时
+    pool: 10                             # 等待连接池中可用连接的超时
+
+  # -- 各 Provider 独立配置 --
+  # 切换 Provider 时只需改 llm.provider 和 llm.base_url，其余字段按 Provider 自动匹配
+  providers:
+    spark:
+      base_url: "https://spark-api-open.xf-yun.com/v1"
+      default_model: "generalv3.5"
+    deepseek:
+      base_url: "https://api.deepseek.com/v1"
+      default_model: "deepseek-chat"
+    qwen:
+      base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+      # default_model: "qwen3.6-flash-2026-04-16"
+      default_model: "qwen3.5-plus-2026-04-20"
+    openai:
+      base_url: "https://api.openai.com/v1"
+      default_model: "gpt-4o-mini"
+
+# ----------------------------------------------------------
+# Embedding 配置 — 文本向量化（DashScope text-embedding-v4）
+# ----------------------------------------------------------
+embedding:
+  use_spark: true                        # true=使用远程 Embedding API；false=使用本地模型（BGE-M3，已废弃）
+  concurrency: 8                         # 嵌入并发数（同时调用的 API 上限，受限于 API 速率限制）
+  api_model: "text-embedding-v4"         # Embedding API 模型名（DashScope）
+  api_base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  timeout_read: 60                       # API embedding 读取超时（秒）
+  timeout_connect: 10                    # API embedding 连接超时（秒）
+  timeout_write: 30                      # API embedding 写入超时（秒）
+  timeout_pool: 10                       # API embedding 连接池超时（秒）
+  index_batch_size: 128                  # 索引构建时每批处理的文本块数（受 api_max_batch_size 硬限制）
+  api_max_batch_size: 10                 # Embedding API 单次调用最大条数（provider 硬限制，切换 provider 时可能需要调整）
+  vector_dimension: 1024                 # 向量维度（text-embedding-v4 输出 1024 维）
+
+# ----------------------------------------------------------
+# RAG 配置 — 检索增强生成：文档切分 + 语义检索
+# ----------------------------------------------------------
+rag:
+  chunk_size: 500                        # 文档切分块大小（字符数）
+  chunk_overlap: 50                      # 相邻块之间的重叠字符数
+  n_results: 5                           # 检索返回条数（默认值，API 可覆盖）
+  score_threshold: 0.5                   # 最低余弦相似度阈值，低于此值的文档块被丢弃
+  context_max_tokens: 3000               # RAG 注入上下文的 token 预算上限
+  max_sections_before_coarse_split: 50   # 文档节数超过此值时，自动切换为粗粒度切分策略
+
+  # -- 多路召回 / 混合检索 --
+  hybrid:
+    enabled: true                        # 总开关；true=启用多路召回，false=仅向量检索
+    paths: [vector, keyword]             # 启用的召回路径：vector（向量）, keyword（关键词）
+    rrf_k: 60                            # RRF 平滑常数（越大各路权重越均匀）
+    vector_weight: 1.0                   # 向量召回路在 RRF 中的权重
+    keyword_weight: 1.0                  # 关键词召回路在 RRF 中的权重
+
+  # -- 父子切割 --
+  parent_chunking:
+    enabled: true                        # 总开关；true=启用父子切割模式
+    parent_max_chars: 2000               # 父块最大字符数
+    child_chunk_size: null               # 子块大小，null=使用 rag.chunk_size
+    child_chunk_overlap: 100             # 子块重叠字符数
+    score_weight: "max"                  # 子块分数聚合方式："max"（取最高分）| "mean"（取均分）
+    parent_split_lookback: 400           # 父块切分时向前搜索安全边界的最大字符数
+
+  # -- 检索精排 --
+  re_rank_keyword_boost: 0.25           # jieba 关键词重叠加权上限
+  keyword_min_length: 2                 # jieba 分词后有效关键词的最小长度（字符）
+  keyword_score_threshold: 0.0          # 关键词检索最低分数阈值（0=不设限）
+  prefetch_multiplier: 3                # 预取倍数（n_results × prefetch_multiplier 候选供精排）
+  prefetch_min: 15                      # 预取候选数下限
+
+  # -- 切分精调 --
+  split_sentence_lookback_ratio: 0.2    # 句边界搜索回看比例（占 chunk_size）
+  min_heading_level_for_split: 3        # 自适应粗切分的最细标题级别（≤2=H1/H2 才允许升粗）
+
+  # -- Query Rewrite --
+  query_rewrite_enabled: true           # 总开关
+  query_rewrite_decontextualize: true   # 是否去上下文化（指代消解）
+  query_rewrite_profile_aware: true     # 是否结合学生画像改写
+  query_rewrite_multi_query: false      # 是否生成多条子查询
+  query_rewrite_multi_query_count: 3    # 子查询生成条数（multi_query 启用时生效）
+  query_rewrite_temperature: 0.1        # 改写温度
+  query_rewrite_max_tokens: 150         # 改写 max_tokens
+
+# ----------------------------------------------------------
+# 对话配置 — 聊天会话管理与历史截断
+# ----------------------------------------------------------
+chat:
+  max_turns: 10                          # 多轮对话最大保留轮数（1 轮 = 1 user + 1 assistant）
+  history_max_tokens: 4000               # 注入 LLM 的对话历史 token 预算
+  message_max_length: 4096               # 单条消息最大字符数（超出截断）
+  session_expiry_days: 30                # 对话会话过期天数（超出后自动清理）
+  cleanup_interval_hours: 24             # 会话清理任务执行间隔（小时）
+
+  # -- 自动标题生成 — 新建对话时由 LLM 自动生成标题 --
+  auto_title_max_chars: 15               # 标题字数建议（给 LLM 的指令，非硬截断）
+  auto_title_message_truncate: 200       # 标题生成时取首条消息的前 N 个字符
+  auto_title_max_tokens: 30              # 标题生成的 max_tokens
+  auto_title_final_length: 20            # 标题最终硬截断长度（字符）
+
+  # -- Token 估算系数 — 用于在不调用 Tokenizer 的情况下估算 token 数 --
+  token_estimation:
+    cn_chars_per_token: 1.5              # 中文字符 / token（约 1.5 字/token）
+    en_chars_per_token: 4.0              # 英文字符 / token（约 4 字符/token）
+
+# ----------------------------------------------------------
+# 知识图谱构建配置 — 从文档自动构建 KG
+# ----------------------------------------------------------
+knowledge_graph:
+  llm_concurrency: 10          # 构建时 LLM 并发上限（DashScope 免费额度限制较低）
+  max_batches: 30               # 送入 LLM 的最大文本批数
+  toc_max_items: 100            # TOC 条目数上限（超出后裁剪）
+  batch_chars_limit: 12000      # 每批最大字符数
+  text_truncate_chars: 6000     # 送入 LLM 的文本截断长度
+  node_extraction_max_tokens: 4000  # 节点提取 max_tokens
+  edge_batch_size: 40           # 边推理批量大小
+  edge_overlap: 10              # 边推理批间重叠数
+  section_merge_min_chars: 200  # 短于该字符数的节会被合并
+
+# 资源生成配置
+generation:
+  default_num_questions: 4               # 默认题目数量
+  max_questions: 20                      # 单次生成题目上限
+  mindmap_max_depth: 4                   # 思维导图最大层级深度
+  mindmap_max_children: 6                # 思维导图每节点最大子项数
+
+  # -- 题目生成 — 弱项阈值与配比 --
+  # 根据学生薄弱知识点数量，动态调整题目难度配比 [基础题, 进阶题, 综合题]
+  quiz:
+    weak_threshold_high: 5               # 高弱项阈值：弱项数 > 此值时使用高弱项配比
+    weak_threshold_mid: 2                # 中弱项阈值：弱项数 > 此值时使用中弱项配比
+    counts_high: [3, 2, 2]               # 高弱项配比 [基础, 进阶, 综合]
+    counts_mid: [2, 1, 1]                # 中弱项配比
+    counts_default: [2, 1, 1]            # 默认配比（弱项数 <= mid 时使用）
+
+# ----------------------------------------------------------
+# 文档存储配置 — 上传文件管理 + 自动清理
+# ----------------------------------------------------------
+storage:
+  upload_dir: "uploaded_docs"            # 上传文件存储目录（相对于项目根目录）
+  knowledge_base_dir: "knowledge_base/ai_intro"  # 启动时自动索引的知识库目录
+  supported_extensions: [".pdf", ".docx", ".doc", ".md", ".txt"]  # 支持的文件扩展名
+  doc_id_hex_length: 12                  # 文档 ID 的十六进制长度（从 MD5 截取）
+
+  # -- 自动清理策略 --
+  cleanup:
+    enabled: true                        # 是否启用自动清理
+    retention_days: 30                   # 已成功索引的文件保留天数
+    orphan_retention_days: 7             # 孤儿文件（导入失败/中断）的保留天数
+    interval_hours: 24                   # 清理任务执行间隔（小时）
+    min_file_age_seconds: 300            # 文件最小存在时间（秒），小于此值的文件不会被清理
+
+# ----------------------------------------------------------
+# 日志配置 — 基于 Loguru 的结构化日志
+# ----------------------------------------------------------
+logging:
+  dir: "logs"                            # 日志文件目录
+  retention_days: 30                     # 普通日志保留天数
+  error_retention_days: 90               # 错误日志保留天数
+  trace_id_length: 8                     # 追踪 ID 长度（取 UUID hex 前 N 字符）
+  json_format: false                     # JSON 结构化日志（生产环境推荐开启）
+  level: "DEBUG"                         # 文件日志级别
+  console_level: "INFO"                  # 控制台日志级别
+
+# ----------------------------------------------------------
+# JWT 配置 — 用户认证 Token
+# ----------------------------------------------------------
+jwt:
+  secret: "${JWT_SECRET}"                # 签名密钥，从环境变量读取
+  algorithm: "HS256"                     # 签名算法
+  expire_hours: 24                       # Token 过期时间（小时）
+
+# ----------------------------------------------------------
+# Agent 配置 — 各 Agent 的 LLM 参数及业务常量
+# temperature: 0=确定性输出，1=最大随机性
+# ----------------------------------------------------------
+agents:
+  # -- 澄清 Agent — 向用户追问完善画像 --
+  clarify:
+    temperature: 0.7
+
+  # -- 代码 Agent — 生成代码示例 --
+  code:
+    temperature: 0.4                     # 降低温度减少偏离资料（原 0.7）
+    max_tokens: 5000                     # 代码输出通常较长
+
+  # -- 动画 Agent — 生成基于 p5.js 的教学动画 --
+  anim:
+    temperature: 0.4                     # 偏低温度保证生成的 sketch 可运行
+    max_tokens: 6000                     # 动画 sketch 源码通常较长
+
+  # -- 文档 Agent — 生成学习文档 --
+  doc:
+    temperature: 0.3                     # 降低温度减少事实编造（原 0.7）
+    max_tokens: 4000
+
+  # -- 思维导图 Agent — 生成结构化知识导图 --
+  mindmap:
+    temperature: 0.3                     # 降低温度保证结构准确性（原 0.5）
+    max_tokens: 2000
+
+  # -- 规划 Agent — 意图识别 + 资源规划 --
+  planner:
+    intent_temperature: 0.0              # 意图识别需要确定性（分类任务）
+    classify_temperature: 0.1            # 资源类型分类需要低随机性
+    smart_plan_temperature: 0.3          # 智能规划可稍灵活
+    history_lookback_messages: 6         # 规划时回顾的最近消息数
+    fallback_kp_id_length: 50            # 兜底知识点 ID 截断长度（注入 prompt 时截断）
+    smart_plan_default_types: ["doc", "quiz"]  # 智能规划默认生成的资源类型
+
+  # -- 画像 Agent — 学生画像提取 + 目标摸底 --
+  profile:
+    extract_temperature: 0.1             # 画像提取需低温度保证准确性
+    intent_temperature: 0.0              # 意图判断需确定性
+    clarify_temperature: 0.7             # 追问可更灵活
+    goal_summary_temperature: 0.3        # 目标总结适中
+    max_goal_questions: 50               # 目标摸底最大出题数
+    history_max_versions: 10             # 用户画像历史版本数上限（超出后删除旧版本）
+
+  # -- 题目 Agent — 生成测验题目 --
+  quiz:
+    temperature: 0.3                     # 降低温度确保题目基于资料（原 0.6）
+    max_tokens: 3000
+
+  # -- 推荐 Agent — 推荐后续学习知识点 --
+  recommend:
+    temperature: 0.7
+    max_tokens: 2000
+    min_recommendations: 3               # 最少推荐知识点数
+    max_recommendations: 5               # 最多推荐知识点数
+
+  # -- 安全 Agent — 内容安全审计 --
+  safety:
+    temperature: 0.1                     # 安全判断需低温度
+    max_tokens: 300
+    max_ref_docs: 5                      # 安全审计引用的最大文档数（从 3 提升，减少漏审）
+    draft_preview_chars: 3000            # 提交给安全审计的草稿预览字符数（从 500 提升）
+
+  # -- 摘要 Agent — 生成学习内容摘要 --
+  summary:
+    temperature: 0.3                     # 降低温度确保摘要忠实于原文（原 0.7）
+    max_tokens: 1200
+    target_words_min: 300                # 摘要最低字数
+    target_words_max: 500                # 摘要最高字数
+
+# ----------------------------------------------------------
+# 分页配置 — API 列表接口默认分页参数
+# ----------------------------------------------------------
+pagination:
+  default_limit: 20                      # 通用列表默认每页条数
+  quiz_attempts_limit: 50                # 答题记录列表默认每页条数
+
+# ----------------------------------------------------------
+# 服务配置 — FastAPI 应用参数
+# ----------------------------------------------------------
+server:
+  version: "0.1.0"
+  cors_origins: ["*"]                    # 允许的跨域来源，["*"] 表示允许所有来源
+
+# 视频搜索配置
+video_search:
+  enabled: true                   # 总开关
+  max_results: 3                  # 最大返回视频数
+  min_query_length: 2             # 查询词最短长度
+  bilibili_timeout: 5             # Bilibili HTTP 超时（秒）
+  tavily_api_key: "${TAVILY_API_KEY}"  # Tavily 备选源 API Key（可选）
+  tavily_timeout: 8               # Tavily HTTP 超时（秒）
+
+# 认证配置
+# ----------------------------------------------------------
+auth:
+  bcrypt_rounds: 12                      # bcrypt 哈希计算轮数（12 轮 ≈ 0.2s，安全与性能的合理折中）
+
+# ----------------------------------------------------------
+# 评估配置 — RAG 评估系统（四层递进体系）
+# ----------------------------------------------------------
+evaluation:
+  enabled: true                         # 总开关：false 时跳过所有评估采集与 LLM Judge
+  mode: "development"                  # "development"=全量评估 | "production"=采样评估
+  health_check_enabled: true           # Layer 1 健康检查（每次请求，<5ms）
+
+  # -- 采样率 —
+  sampling:
+    development: 1.0                   # 开发模式：100% LLM Judge
+    production: 0.1                    # 生产模式：10% LLM Judge
+
+  # -- 多 LLM 交叉验证 —
+  cross_validation:
+    enabled: false                     # 开启后成本翻倍，开发调试时使用
+    providers: ["qwen", "deepseek"]    # 参与交叉验证的 LLM provider
+
+  # -- 黄金测试集 —
+  golden_dataset:
+    path: "backend/evaluation/golden_queries.yaml"
+    auto_run_interval_hours: 24        # 定时自动运行间隔
+
+  # -- A/B 实验 —
+  ab_experiment:
+    enabled: false
+    groups: []                         # 实验分组标签列表
+
+  # -- 持久化 —
+  storage:
+    persist_to_db: false               # 评估结果写入 PostgreSQL（已弃用，改用内存 + 文件存储）
+    retention_days: 90                 # 评估记录保留天数
+
+# ----------------------------------------------------------
+# 学习计划表配置 — 个性化排程参数
+# ----------------------------------------------------------
+study_plan:
+  default_daily_minutes: 60              # 画像未设置每日学习时长时的兜底值（分钟）
+  default_start_hour: "19:00"            # 默认每日起始时刻（仅当请求要求生成时段时使用）
+  default_horizon_days: 14               # 未指定 days 时的默认排程跨度参考
+  min_kp_minutes: 20                     # 单知识点学习时长下限（钳制 LLM 预估）
+  max_kp_minutes: 180                    # 单知识点学习时长上限
+  default_kp_minutes: 45                 # LLM 未给出预估时的默认单点时长
+  target_resource_types: ["doc", "mindmap", "quiz"]   # 计划项默认匹配/补全的资源类型
+  sequence:
+    temperature: 0.3                     # 知识点排序 LLM 温度
+    max_tokens: 2048
+
+# ----------------------------------------------------------
+# 邮件服务配置 — SMTP 发送邮件（验证、密码重置、学习报告）
+# ----------------------------------------------------------
+email:
+  smtp_host: "${SMTP_HOST}"
+  smtp_port: "${SMTP_PORT}"
+  smtp_username: "${SMTP_USERNAME}"
+  smtp_password: "${SMTP_PASSWORD}"
+  smtp_from: "${SMTP_FROM}"
+  smtp_use_tls: "${SMTP_USE_TLS-true}"
+  smtp_timeout: "${SMTP_TIMEOUT-30}"
+  max_retries: "${EMAIL_MAX_RETRIES-3}"
+  verification_expire_minutes: "${EMAIL_VERIFY_EXPIRE_MINUTES-30}"
+  password_reset_expire_minutes: "${EMAIL_PASSWORD_RESET_EXPIRE_MINUTES-15}"
+  rate_limit_send_per_hour: "${EMAIL_RATE_LIMIT_PER_HOUR-5}"

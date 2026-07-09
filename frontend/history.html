@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
+    <title>历史记录 - 个性化学习助手</title>
+    <script src="https://unpkg.com/lucide@0.460.0"></script>
+    <link rel="stylesheet" href="./assets/styles-v4.css">
+    <link rel="stylesheet" href="./assets/assistant.css">
+    <style>
+
+        /* Stats row — uses styles-v4 .stat-row / .stat-num / .stat-lbl */
+
+        /* Filter bar */
+        .filter-bar {
+            display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;
+        }
+        .filter-bar select, .filter-bar input {
+            font-family: var(--font); font-size: 13px;
+            padding: 7px 12px; border: 1px solid var(--border); border-radius: var(--r-sm);
+            background: #fff; color: var(--text-1); outline: none;
+        }
+        .filter-bar select:focus, .filter-bar input:focus { border-color: var(--accent); }
+        .filter-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+        .filter-chip {
+            display: inline-flex; align-items: center; gap: 2px;
+            padding: 5px 12px; border-radius: var(--r-full);
+            font-size: 12px; border: 1px solid var(--border);
+            background: transparent; color: var(--text-2); cursor: pointer;
+            font-family: var(--font); transition: all 0.15s; user-select: none;
+        }
+        .filter-chip:hover { border-color: var(--accent); color: var(--accent); }
+        .filter-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+        /* Timeline */
+        .tl-group { margin-bottom: 20px; }
+        .tl-group-header {
+            display: flex; align-items: center; gap: 10px;
+            font-family: var(--display); font-size: 14px; font-weight: 700;
+            color: var(--text-2); margin-bottom: 4px;
+            cursor: pointer; user-select: none; padding: 4px 0;
+        }
+        .tl-group-header:hover { color: var(--accent); }
+        .tl-group-header .tl-chevron {
+            width: 16px; height: 16px; transition: transform 0.2s; display: inline-flex; align-items: center; justify-content: center;
+        }
+        .tl-group-header.collapsed .tl-chevron { transform: rotate(-90deg); }
+        .tl-group-header .tl-line { flex: 1; height: 1px; background: var(--divider); }
+        .tl-item {
+            display: flex; align-items: flex-start; gap: 12px;
+            padding: 9px 0; position: relative;
+        }
+        .tl-item::before {
+            content: '';
+            position: absolute; left: 5px; top: 20px; bottom: -10px;
+            width: 1px; background: var(--divider);
+        }
+        .tl-item:last-child::before { display: none; }
+        .tl-dot {
+            width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0;
+            margin-top: 5px; position: relative; z-index: 1;
+        }
+        .tl-dot.complete { background: var(--accent); }
+        .tl-dot.quiz { background: var(--success); }
+        .tl-dot.view { background: var(--text-4); }
+        .tl-dot.stay { background: var(--divider); }
+        .tl-body { flex: 1; min-width: 0; }
+        .tl-time {
+            font-family: var(--mono); font-size: 12px; color: var(--text-3);
+            margin-bottom: 2px;
+        }
+        .tl-kp {
+            font-size: 14px; font-weight: 500; color: var(--text-1);
+        }
+        .tl-meta {
+            display: flex; align-items: center; gap: 8px; margin-top: 2px;
+            font-size: 12px; color: var(--text-4);
+        }
+        .tl-tag {
+            display: inline-block; padding: 1px 7px; border-radius: var(--r-sm);
+            font-size: 11px; font-weight: 500;
+            background: var(--accent-soft); color: var(--accent);
+        }
+        .tl-tag.quiz-tag { background: var(--success-soft); color: var(--success); }
+        .tl-tag.view-tag { background: var(--bg-hover); color: var(--text-4); }
+        .tl-tag.stay-tag { background: var(--bg-sidebar); color: var(--text-4); }
+        .tl-duration {
+            font-family: var(--mono); font-size: 12px; color: var(--text-2);
+            white-space: nowrap; flex-shrink: 0; margin-top: 5px;
+        }
+
+        /* Load more */
+        .tl-more {
+            text-align: center; padding: 16px;
+        }
+        .tl-more button {
+            font-family: var(--font); font-size: 13px; color: var(--accent);
+            border: 1px solid var(--divider); background: #fff;
+            padding: 8px 28px; border-radius: var(--r-md); cursor: pointer;
+        }
+        .tl-more button:hover { background: var(--accent-soft); border-color: var(--accent); }
+        .tl-more button:disabled { opacity: 0.4; cursor: default; }
+
+        /* Quiz session groups */
+        .sess-group {
+            background: #fff;
+            border: 1px solid var(--divider);
+            border-radius: var(--r-md);
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+        .sess-head {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 16px;
+            cursor: pointer; user-select: none;
+            transition: background 0.15s;
+        }
+        .sess-head:hover { background: var(--bg-hover); }
+        .sess-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .sess-dot.good { background: var(--success); }
+        .sess-dot.warn { background: var(--warning); }
+        .sess-dot.bad  { background: var(--danger); }
+        .sess-date { font-weight: 600; font-size: 14px; color: var(--text-1); }
+        .sess-score { margin-left: auto; font-family: var(--mono); font-size: 14px; font-weight: 700; }
+        .sess-score.good { color: var(--success); }
+        .sess-score.warn { color: var(--warning); }
+        .sess-score.bad  { color: var(--danger); }
+        .sess-meta { font-size: 12px; color: var(--text-3); }
+        .sess-arrow { color: var(--text-3); transition: transform 0.2s; flex-shrink: 0; }
+        .sess-head.open .sess-arrow { transform: rotate(180deg); }
+        .sess-body { display: none; border-top: 1px solid var(--divider); }
+        .sess-body.open { display: block; }
+        .sess-mini-table { width: 100%; border-collapse: collapse; }
+        .sess-mini-table td {
+            padding: 8px 12px; font-size: 13px;
+            border-bottom: 1px solid var(--divider);
+        }
+        .sess-mini-table tr:last-child td { border-bottom: none; }
+        .sess-mini-table .sq-num { width: 30px; color: var(--text-3); text-align: center; }
+        .sess-mini-table .sq-stem {
+            max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .sess-mini-table .sq-kp {
+            display: inline-block; padding: 1px 7px; border-radius: var(--r-sm);
+            font-size: 11px; background: var(--accent-soft); color: var(--accent);
+            max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .sess-mini-table .sq-res { cursor: pointer; color: var(--accent); font-size: 12px; }
+        .sess-mini-table .sq-res:hover { text-decoration: underline; }
+        .sess-see-all { text-align: center; padding: 8px; font-size: 12px; color: var(--accent); cursor: pointer; border-top: 1px solid rgba(120,90,60,0.05); }
+        .sess-see-all:hover { text-decoration: underline; }
+
+        /* Attempt detail modal */
+        .attempt-detail-overlay {
+            position: fixed; inset: 0; z-index: 1000;
+            background: rgba(45,35,24,0.25);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .attempt-detail-box {
+            background: #fff; border-radius: var(--r-lg); padding: 24px 28px;
+            max-width: 580px; width: 90vw; max-height: 80vh; overflow-y: auto;
+            box-shadow: var(--shadow-modal);
+        }
+        .attempt-detail-box h3 { font-family: var(--display); font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+        .attempt-detail-box .ad-meta { font-size: 12px; color: var(--text-3); margin-bottom: 14px; }
+        .attempt-detail-box .ad-section { margin-bottom: 14px; }
+        .attempt-detail-box .ad-label { font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 4px; }
+        .attempt-detail-box .ad-stem { font-size: 14px; color: var(--text-1); line-height: 1.6; }
+        .attempt-detail-box .ad-answer {
+            padding: 8px 14px; border-radius: var(--r-sm); font-size: 13px; margin-top: 4px;
+        }
+        .attempt-detail-box .ad-answer.correct { background: var(--success-soft); color: var(--success); }
+        .attempt-detail-box .ad-answer.wrong { background: var(--danger-soft); color: var(--danger); }
+        .attempt-detail-box .ad-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+
+        /* Quiz stats row — uses styles-v4 .stat-row / .stat-num / .stat-lbl */
+    </style>
+</head>
+<body>
+    <div id="view">
+    <div class="app-layout">
+        <div class="app-content">
+        <div class="app-body">
+            <h1 class="page-title">历史记录</h1>
+            <p class="page-subtitle">回溯学习历程，审视答题记录，追踪成长轨迹。</p>
+
+            <!-- Tabs -->
+            <div class="tab-bar">
+                <button class="tab-btn active" onclick="switchTab('activity')">最近动态</button>
+                <button class="tab-btn" onclick="switchTab('quiz')">答题历史</button>
+            </div>
+
+            <!-- Tab: 最近动态 -->
+            <div id="tab-activity">
+                <div class="stat-row" id="audit-stats"></div>
+                <div class="filter-bar">
+                    <select id="act-filter-kp"><option value="">全部知识点</option></select>
+                    <div class="filter-chips" id="act-filter-actions">
+                        <span class="filter-chip active" data-action="">全部</span>
+                        <span class="filter-chip" data-action="complete">完成学习</span>
+                        <span class="filter-chip" data-action="quiz">测验</span>
+                        <span class="filter-chip" data-action="view">浏览</span>
+                        <span class="filter-chip" data-action="stay">挂机</span>
+                    </div>
+                    <input type="text" id="act-search" placeholder="搜索知识点…" style="width:160px;">
+                </div>
+                <div id="activity-list"></div>
+                <div class="tl-more" id="act-more" style="display:none;">
+                    <button id="act-load-btn">加载更多</button>
+                </div>
+            </div>
+
+            <!-- Tab: 答题历史 -->
+            <div id="tab-quiz" style="display:none;">
+                <div class="filter-bar">
+                    <div class="filter-chips" id="quiz-filter-score">
+                        <span class="filter-chip active" data-score="">全部</span>
+                        <span class="filter-chip" data-score="good">优秀 ≥80%</span>
+                        <span class="filter-chip" data-score="warn">一般 ≥60%</span>
+                        <span class="filter-chip" data-score="bad">较差 &lt;60%</span>
+                    </div>
+                </div>
+                <div id="quiz-list"></div>
+            </div>
+
+            <!-- Attempt detail modal -->
+            <div id="attempt-detail-overlay" class="attempt-detail-overlay hidden" onclick="if(event.target===this)closeAttemptDetail()">
+                <div class="attempt-detail-box" id="attempt-detail-box"></div>
+            </div>
+        </div>
+        </div>
+    </div>
+    </div>
+
+    <script type="module">
+        import { isLoggedIn, getUserId, getLearningRecords, getQuizAttempts } from './assets/api.js';
+        import { showToast } from './assets/toast.js';
+        import { registerPage, initSidebar } from './assets/nav.js';
+
+        if (!isLoggedIn()) {
+            window.location.href = 'auth.html';
+        }
+
+        const userId = getUserId();
+
+        // === Shared state ===
+        let _activityData = [];
+        let _actPage = 0;
+        let _actPageSize = 30;
+        let _actHasMore = true;
+        let _actLoading = false;
+
+        let _quizData = [];
+        const _attemptCache = new Map();
+
+        // === Init ===
+        async function init() {
+            initSidebar('history');
+            bindEvents();
+            await Promise.all([loadActivity(true), loadQuizData()]);
+            updateOverviewStats();
+        }
+
+        // === Tab switching ===
+        window.switchTab = function(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                if ((tab === 'activity' && b.textContent.includes('动态')) ||
+                    (tab === 'quiz' && b.textContent.includes('答题'))) {
+                    b.classList.add('active');
+                }
+            });
+            document.getElementById('tab-activity').style.display = tab === 'activity' ? 'block' : 'none';
+            document.getElementById('tab-quiz').style.display = tab === 'quiz' ? 'block' : 'none';
+        };
+
+        // === Overview stats ===
+        function updateOverviewStats() {
+            const allRecs = _activityData;
+            const now = new Date();
+            const weekStart = new Date(now);
+            weekStart.setDate(now.getDate() - now.getDay() + 1);
+            weekStart.setHours(0, 0, 0, 0);
+            const weekDays = new Set();
+            let totalSec = 0;
+            const kpSet = new Set();
+            allRecs.forEach(r => {
+                const d = new Date(r.recorded_at);
+                if (d >= weekStart) weekDays.add(d.toISOString().slice(0, 10));
+                totalSec += r.duration_seconds || 0;
+                if (r.kp_id) kpSet.add(r.kp_id);
+            });
+
+            const quizTotal = _quizData.length;
+            const quizCorrect = _quizData.filter(a => a.is_correct).length;
+            const quizAvg = quizTotal ? Math.round(quizCorrect / quizTotal * 100) : 0;
+
+            document.getElementById('audit-stats').innerHTML = `
+                <div class="stat-item"><i data-lucide="calendar-days" class="stat-icon"></i><div class="stat-num">${weekDays.size}</div><div class="stat-lbl">本周学习天数</div></div>
+                <div class="stat-item"><i data-lucide="clock" class="stat-icon"></i><div class="stat-num">${(totalSec / 3600).toFixed(1)}</div><div class="stat-lbl">累计时长 (h)</div></div>
+                <div class="stat-item"><i data-lucide="file-question" class="stat-icon"></i><div class="stat-num">${quizTotal}</div><div class="stat-lbl">答题总数</div></div>
+                <div class="stat-item"><i data-lucide="target" class="stat-icon"></i><div class="stat-num">${quizAvg}%</div><div class="stat-lbl">答题正确率</div></div>
+            `;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        // ============================================================
+        // === Tab 1: 最近动态 (Learning Records) ===
+        // ============================================================
+
+        const ACTION_LABELS = { complete: '完成学习', quiz: '完成测验', view: '浏览资源', stay: '页面停留' };
+        const DOT_CLASS = { complete: 'complete', quiz: 'quiz', view: 'view', stay: 'stay' };
+
+        function fmtDuration(sec) {
+            if (!sec || sec <= 0) return '';
+            if (sec < 60) return sec + 's';
+            if (sec < 3600) return Math.round(sec / 60) + ' min';
+            return (sec / 3600).toFixed(1) + ' h';
+        }
+
+        function fmtTime(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            return d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        function getActivityFilterState() {
+            const kp = document.getElementById('act-filter-kp')?.value || '';
+            const activeChip = document.querySelector('#act-filter-actions .filter-chip.active');
+            const action = activeChip ? activeChip.dataset.action : '';
+            const search = (document.getElementById('act-search')?.value || '').trim().toLowerCase();
+            return { kp, action, search };
+        }
+
+        function applyActivityFilters(records) {
+            const { kp, action, search } = getActivityFilterState();
+            return records.filter(r => {
+                if (kp && r.kp_id !== kp) return false;
+                if (action && r.action !== action) return false;
+                if (search && !(r.kp_name || '').toLowerCase().includes(search)) return false;
+                return true;
+            });
+        }
+
+        function groupByDate(records) {
+            const now = new Date();
+            const today = now.toISOString().slice(0, 10);
+            const yday = new Date(now);
+            yday.setDate(now.getDate() - 1);
+            const yesterday = yday.toISOString().slice(0, 10);
+            const weekStart = new Date(now);
+            weekStart.setDate(now.getDate() - now.getDay() + 1);
+            weekStart.setHours(0, 0, 0, 0);
+            const lastWeekStart = new Date(weekStart);
+            lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+            const monthStart = now.toISOString().slice(0, 7) + '-01';
+
+            const groups = [
+                { key: 'today', label: '今天', records: [], collapsed: false },
+                { key: 'yesterday', label: '昨天', records: [], collapsed: false },
+                { key: 'thisWeek', label: '本周', records: [], collapsed: false },
+                { key: 'lastWeek', label: '上周', records: [], collapsed: true },
+                { key: 'thisMonth', label: '本月', records: [], collapsed: true },
+                { key: 'earlier', label: '更早', records: [], collapsed: true },
+            ];
+
+            records.forEach(r => {
+                const d = parseAsUTC(r.recorded_at).toISOString().slice(0, 10);
+                if (d === today) { groups[0].records.push(r); }
+                else if (d === yesterday) { groups[1].records.push(r); }
+                else if (d >= weekStart.toISOString().slice(0, 10)) { groups[2].records.push(r); }
+                else if (d >= lastWeekStart.toISOString().slice(0, 10)) { groups[3].records.push(r); }
+                else if (d >= monthStart) { groups[4].records.push(r); }
+                else { groups[5].records.push(r); }
+            });
+
+            return groups.filter(g => g.records.length > 0);
+        }
+
+        function renderTimeline(records) {
+            const list = document.getElementById('activity-list');
+            if (!records.length) {
+                list.innerHTML = '<div class="empty-state">没有匹配的记录</div>';
+                return;
+            }
+            const groups = groupByDate(records);
+            list.innerHTML = groups.map(g => `
+                <div class="tl-group" data-group="${g.key}">
+                    <div class="tl-group-header${g.collapsed ? ' collapsed' : ''}" onclick="this.classList.toggle('collapsed');const items=this.parentElement.querySelector('.tl-items');if(items)items.classList.toggle('hidden');">
+                        <span class="tl-chevron"><i data-lucide="chevron-down" style="width:14px;height:14px;"></i></span>
+                        <span>${g.label}</span><span style="font-family:var(--mono);font-size:11px;color:var(--text-4);">${g.records.length} 条</span>
+                        <span class="tl-line"></span>
+                    </div>
+                    <div class="tl-items${g.collapsed ? ' hidden' : ''}">
+                        ${g.records.map(r => `
+                            <div class="tl-item">
+                                <div class="tl-dot ${DOT_CLASS[r.action] || 'view'}"></div>
+                                <div class="tl-body">
+                                    <div class="tl-time">${fmtTime(r.recorded_at)}</div>
+                                    <div class="tl-kp">${escapeHtml(r.kp_name || r.kp_id || '未命名')}</div>
+                                    <div class="tl-meta">
+                                        <span class="tl-tag${r.action === 'quiz' ? ' quiz-tag' : r.action === 'view' ? ' view-tag' : r.action === 'stay' ? ' stay-tag' : ''}">${ACTION_LABELS[r.action] || r.action}</span>
+                                    </div>
+                                </div>
+                                ${r.duration_seconds ? `<div class="tl-duration">${fmtDuration(r.duration_seconds)}</div>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        async function loadActivity(reset = true) {
+            if (_actLoading) return;
+            _actLoading = true;
+            const list = document.getElementById('activity-list');
+            const moreEl = document.getElementById('act-more');
+            if (reset) {
+                _actPage = 0;
+                _activityData = [];
+                _actHasMore = true;
+                list.innerHTML = '<div class="loading"><div class="spinner"></div>加载中…</div>';
+                moreEl.style.display = 'none';
+            }
+            try {
+                const raw = await getLearningRecords(userId, { limit: _actPageSize + 1, skip: _actPage * _actPageSize }) || [];
+                // 过滤掉无知识点的页面停留（通用页面如主页/对话/资源库的停留无意义，会显示为「未命名」）
+                const records = raw.filter(r => !(r.action === 'stay' && !r.kp_id));
+                _actHasMore = raw.length > _actPageSize;
+                const batch = _actHasMore ? records.slice(0, _actPageSize) : records;
+                if (reset) _activityData = batch;
+                else _activityData = _activityData.concat(batch);
+                _actPage++;
+            } catch (e) {
+                if (reset) list.innerHTML = '<div class="empty-state">加载失败</div>';
+                _actLoading = false;
+                return;
+            }
+            if (!_activityData.length) {
+                list.innerHTML = '<div class="empty-state"><i data-lucide="activity" style="width:40px;height:40px;opacity:0.3;display:block;margin:0 auto 12px;"></i>暂无学习动态<br><span style="font-size:12px;color:var(--text-3);">开始学习后这里会显示你的活动记录</span></div>';
+                lucide.createIcons();
+                moreEl.style.display = 'none';
+                _actLoading = false;
+                return;
+            }
+            // Populate KP filter
+            const kpSet = new Map();
+            _activityData.forEach(r => { if (r.kp_id && !kpSet.has(r.kp_id)) kpSet.set(r.kp_id, r.kp_name || r.kp_id); });
+            const kpSel = document.getElementById('act-filter-kp');
+            kpSel.innerHTML = '<option value="">全部知识点</option>' + [...kpSet.entries()].map(([id, name]) => `<option value="${escapeHtml(id)}">${escapeHtml(name)}</option>`).join('');
+
+            const filtered = applyActivityFilters(_activityData);
+            renderTimeline(filtered);
+            moreEl.style.display = _actHasMore ? '' : 'none';
+            _actLoading = false;
+        }
+
+        function onActivityFilterChange() {
+            const filtered = applyActivityFilters(_activityData);
+            renderTimeline(filtered);
+        }
+
+        // ============================================================
+        // === Tab 2: 答题历史 (Quiz History) ===
+        // ============================================================
+
+        // 后端用 datetime.utcnow() 存储的是 naive UTC，没有时区标记。
+        // 浏览器 new Date(naiveString) 会按本地时间解析，导致差 8 小时。
+        function parseAsUTC(ts) {
+            if (!ts) return new Date();
+            if (typeof ts === 'string' && !ts.endsWith('Z') && !/[+\-]\d{2}:\d{2}$/.test(ts)) {
+                return new Date(ts + 'Z');
+            }
+            return new Date(ts);
+        }
+
+        function fmtDate(ts) {
+            const d = parseAsUTC(ts);
+            const now = new Date();
+            const dateStr = d.toISOString().slice(0, 10);
+            const todayStr = now.toISOString().slice(0, 10);
+            const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().slice(0, 10);
+            const time = d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+            if (dateStr === todayStr) return '今天 ' + time;
+            if (dateStr === yesterdayStr) return '昨天 ' + time;
+            return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + time;
+        }
+
+        function groupIntoSessions(attempts) {
+            const sessions = [];
+            for (const a of attempts) {
+                const t = parseAsUTC(a.created_at).getTime();
+                const last = sessions[sessions.length - 1];
+                if (!last || (last.lastTime - t) > 60000) {
+                    sessions.push({ lastTime: t, dateLabel: fmtDate(a.created_at), items: [a] });
+                } else {
+                    last.items.push(a);
+                    last.lastTime = Math.min(last.lastTime, t);
+                }
+            }
+            return sessions;
+        }
+
+        function buildSessHTML(sessions) {
+            return sessions.map((s) => {
+                const total = s.items.length;
+                const correct = s.items.filter(i => i.is_correct).length;
+                const pct = Math.round(correct / total * 100);
+                const scoreCls = pct >= 80 ? 'good' : pct >= 60 ? 'warn' : 'bad';
+                const dotCls = pct >= 80 ? 'good' : pct >= 60 ? 'warn' : 'bad';
+                const types = {};
+                s.items.forEach(i => { const t = i.question_type === 'multi' ? '多选' : i.question_type === 'fill' ? '填空' : '单选'; types[t] = (types[t] || 0) + 1; });
+                const typeStr = Object.entries(types).map(([k, v]) => k + '\u00d7' + v).join('  ');
+                return `
+                <div class="sess-group">
+                    <div class="sess-head" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open');">
+                        <span class="sess-dot ${dotCls}"></span>
+                        <span class="sess-date">${s.dateLabel}</span>
+                        <span class="sess-meta">${total}题  ${typeStr}</span>
+                        <span class="sess-score ${scoreCls}">${correct}/${total} (${pct}%)</span>
+                        <i data-lucide="chevron-down" class="sess-arrow" style="width:16px;height:16px;"></i>
+                    </div>
+                    <div class="sess-body">
+                        <table class="sess-mini-table">${s.items.map((a, qi) => {
+                            const resultIcon = a.is_correct
+                                ? '<span style="color:var(--success);font-weight:600;">\u2713</span>'
+                                : '<span style="color:var(--danger);font-weight:600;">\u2717</span>';
+                            const typeLabel = a.question_type === 'multi' ? '多选' : a.question_type === 'fill' ? '填空' : '单选';
+                            return `<tr>
+                                <td class="sq-num">${qi + 1}</td>
+                                <td class="sq-stem" title="${escapeHtml(a.stem || '')}">${escapeHtml(a.stem || '(无题目)')}</td>
+                                <td><span class="sq-kp">${escapeHtml(a.kp_name || a.kp_id || '-')}</span></td>
+                                <td style="font-size:11px;color:var(--text-3);">${typeLabel}</td>
+                                <td>${resultIcon}</td>
+                                <td><span class="sq-res" data-attempt-id="${a.id}">详情</span></td>
+                            </tr>`;
+                        }).join('')}</table>
+                        ${total > 5 ? `<div class="sess-see-all" onclick="event.stopPropagation();window._showAttemptDetailById(${s.items[0].id});">查看全部 ${total} 题详情 \u25b8</div>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function loadQuizData() {
+            try {
+                _quizData = await getQuizAttempts(userId) || [];
+            } catch (e) {
+                _quizData = [];
+            }
+            _quizData.forEach(a => _attemptCache.set(a.id, a));
+            renderQuizList();
+        }
+
+        function getQuizFilterScore() {
+            const activeChip = document.querySelector('#quiz-filter-score .filter-chip.active');
+            return activeChip ? activeChip.dataset.score : '';
+        }
+
+        function renderQuizList() {
+            const list = document.getElementById('quiz-list');
+            if (!_quizData.length) {
+                list.innerHTML = '<div class="empty-state"><i data-lucide="file-question" style="width:40px;height:40px;opacity:0.3;display:block;margin:0 auto 12px;"></i>暂无答题记录<br><span style="font-size:12px;color:var(--text-3);">完成测验后这里会显示你的答题历史</span></div>';
+                lucide.createIcons();
+                return;
+            }
+
+            const scoreFilter = getQuizFilterScore();
+            let displayList = _quizData;
+            if (scoreFilter) {
+                displayList = _quizData.filter(a => {
+                    if (scoreFilter === 'good') return a.is_correct;
+                    return !a.is_correct;
+                });
+                // For warn/bad we need session-level scoring, so apply after grouping
+            }
+
+            const sessions = groupIntoSessions(displayList);
+
+            // Apply score filter at session level for warn/bad
+            let filteredSessions = sessions;
+            if (scoreFilter === 'good') {
+                filteredSessions = sessions.filter(s => {
+                    const pct = Math.round(s.items.filter(i => i.is_correct).length / s.items.length * 100);
+                    return pct >= 80;
+                });
+            } else if (scoreFilter === 'warn') {
+                filteredSessions = sessions.filter(s => {
+                    const pct = Math.round(s.items.filter(i => i.is_correct).length / s.items.length * 100);
+                    return pct >= 60 && pct < 80;
+                });
+            } else if (scoreFilter === 'bad') {
+                filteredSessions = sessions.filter(s => {
+                    const pct = Math.round(s.items.filter(i => i.is_correct).length / s.items.length * 100);
+                    return pct < 60;
+                });
+            }
+
+            if (!filteredSessions.length) {
+                list.innerHTML = '<div class="empty-state">该级别暂无匹配记录</div>';
+                return;
+            }
+
+            list.innerHTML = buildSessHTML(filteredSessions);
+            lucide.createIcons();
+
+            // Delegate click for detail links
+            list.querySelectorAll('.sq-res[data-attempt-id]').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = parseInt(el.dataset.attemptId);
+                    window._showAttemptDetailById(id);
+                });
+            });
+        }
+
+        function onQuizFilterChange() {
+            renderQuizList();
+        }
+
+        // === Attempt detail modal ===
+        window._showAttemptDetailById = function(id) {
+            const attempt = _attemptCache.get(id);
+            if (!attempt) {
+                showToast('详情数据不可用', 'warning');
+                return;
+            }
+            const typeLabel = attempt.question_type === 'multi' ? '多选' : attempt.question_type === 'fill' ? '填空' : '单选';
+            const isCorrect = attempt.is_correct;
+            const overlay = document.getElementById('attempt-detail-overlay');
+            const box = document.getElementById('attempt-detail-box');
+            box.innerHTML = `
+                <h3>${escapeHtml(attempt.kp_name || attempt.kp_id || '未知知识点')}</h3>
+                <div class="ad-meta">${typeLabel} · ${fmtDate(attempt.created_at)} · ${isCorrect ? '回答正确' : '回答错误'}</div>
+                <div class="ad-section">
+                    <div class="ad-label">题目</div>
+                    <div class="ad-stem">${escapeHtml(attempt.stem || '(无题目内容)')}</div>
+                </div>
+                <div class="ad-section">
+                    <div class="ad-label">你的回答</div>
+                    <div class="ad-answer ${isCorrect ? 'correct' : 'wrong'}">${escapeHtml(attempt.user_answer || '(未作答)')}</div>
+                </div>
+                ${!isCorrect && attempt.correct_answer ? `
+                <div class="ad-section">
+                    <div class="ad-label">正确答案</div>
+                    <div class="ad-answer correct">${escapeHtml(attempt.correct_answer)}</div>
+                </div>` : ''}
+                <div class="ad-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="closeAttemptDetail()">关闭</button>
+                </div>
+            `;
+            overlay.classList.remove('hidden');
+        };
+
+        window.closeAttemptDetail = function() {
+            document.getElementById('attempt-detail-overlay').classList.add('hidden');
+        };
+
+        // === Event bindings ===
+        function bindEvents() {
+            document.getElementById('act-filter-kp').addEventListener('change', onActivityFilterChange);
+            document.querySelectorAll('#act-filter-actions .filter-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    document.querySelectorAll('#act-filter-actions .filter-chip').forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    onActivityFilterChange();
+                });
+            });
+            document.getElementById('act-search').addEventListener('input', onActivityFilterChange);
+            document.getElementById('act-load-btn').addEventListener('click', () => loadActivity(false));
+
+            document.querySelectorAll('#quiz-filter-score .filter-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    document.querySelectorAll('#quiz-filter-score .filter-chip').forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    onQuizFilterChange();
+                });
+            });
+        }
+
+        function destroy() {}
+
+        registerPage('history', init, destroy);
+        init();
+    </script>
+    <script>lucide.createIcons();</script>
+    <script src="./assets/tracker.js"></script>
+    <script type="module" src="./assets/assistant.js"></script>
+</body>
+</html>

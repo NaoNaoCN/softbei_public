@@ -1,0 +1,52 @@
+# ============================================================
+# A3 个性化资源生成与学习多智能体系统 — 依赖清单
+# ============================================================
+
+# ---- Web 框架 ----
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+pydantic>=2.6.0
+pydantic-settings>=2.2.0
+
+# ---- 前端（HTML/CSS/JS，由 FastAPI StaticFiles 提供）----
+# （前端代码在 html-test/ 目录，无需 pip 安装）
+
+# ---- LLM & Agent ----
+langchain>=0.2.0
+langchain-community>=0.2.0
+langgraph>=0.1.0
+openai>=1.25.0          # 讯飞星火 API 兼容 OpenAI SDK
+
+# ---- RAG / 向量检索 ----
+numpy>=1.26.0
+pgvector>=0.4.0               # PostgreSQL pgvector 扩展 Python 客户端
+
+# ---- 数据库 ----
+sqlalchemy>=2.0.0
+asyncpg>=0.29.0         # PostgreSQL 异步驱动
+alembic>=1.13.0         # 数据库迁移管理
+PyYAML>=6.0             # YAML 配置文件解析
+
+# ---- 文档解析 ----
+pypdf>=4.2.0
+python-docx>=1.1.0
+markdown>=3.6
+pymupdf4llm>=0.3.0      # PDF → Markdown（保留标题/表格/列表结构）
+mammoth>=1.8.0           # DOCX → Markdown
+
+# ---- 邮件 ----
+aiosmtplib>=4.0.0
+
+# ---- 工具 ----
+python-dotenv>=1.0.0
+loguru>=0.7.0
+tenacity>=8.3.0         # 重试装饰器
+PyJWT>=2.8.0            # JWT 编解码
+bcrypt>=4.1.0           # 密码哈希（已用于 auth）
+jieba
+
+# ---- 测试 ----
+pytest>=8.2.0
+pytest-asyncio>=0.23.0
+httpx>=0.27.0           # AsyncClient for FastAPI testing

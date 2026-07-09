@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="view-transition" content="same-origin">
+    <title>生成资源 · 智学工坊</title>
+    <script src="https://unpkg.com/lucide@0.460.0"></script>
+    <link rel="stylesheet" href="./assets/styles-v4.css">
+    <link rel="stylesheet" href="./assets/assistant.css">
+    <style>
+
+        /* Content Grid */
+        .content-grid {
+            display: grid; grid-template-columns: 320px 1fr; gap: 24px; align-items: start;
+        }
+
+        /* Form Card */
+        .form-card {
+            background: #fff; border: 1px solid var(--divider); border-radius: var(--r-lg);
+            padding: 24px; position: sticky; top: 24px;
+        }
+        .card-title { font-family: var(--display); font-size: 15px; font-weight: 700; margin-bottom: 20px; }
+
+        /* KP Cascade */
+        .kp-cascade { display: flex; flex-direction: column; gap: 8px; }
+        .kp-cascade .form-select { transition: opacity 0.2s; }
+        .kp-cascade .form-select:disabled { opacity: 0.5; }
+        .kp-selected-path {
+            margin-top: 6px; padding: 6px 12px; background: var(--accent-soft); border-radius: var(--r-sm);
+            font-size: 12px; color: var(--accent); display: none; word-break: break-all;
+        }
+
+        /* Resource Type Cards */
+        .res-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .res-type-card {
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            padding: 14px 8px; border-radius: var(--r-md); cursor: pointer;
+            border: 1.5px solid var(--divider); background: #fff;
+            transition: all 0.2s var(--ease); text-align: center;
+        }
+        .res-type-card:hover { border-color: var(--accent); }
+        .res-type-card.selected {
+            border-color: var(--accent); background: var(--accent-soft);
+            box-shadow: 0 0 0 1px var(--accent);
+        }
+        .res-type-card i { width: 22px; height: 22px; color: var(--text-3); transition: color 0.2s; }
+        .res-type-card.selected i { color: var(--accent); }
+        .res-type-card span { font-size: 12px; font-weight: 500; color: var(--text-2); }
+        .res-type-card.selected span { color: var(--accent); font-weight: 600; }
+        .res-type-card .card-check {
+            width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--border);
+            display: flex; align-items: center; justify-content: center; font-size: 10px;
+            transition: all 0.2s;
+        }
+        .res-type-card.selected .card-check {
+            background: var(--accent); border-color: var(--accent); color: #fff;
+        }
+
+        /* Quiz config inline */
+        .quiz-config {
+            margin-top: 10px; padding: 12px; background: var(--bg-page); border-radius: var(--r-md);
+            display: none;
+        }
+        .quiz-config-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+        .quiz-config-row:last-child { margin-bottom: 0; }
+        .quiz-config-row span { font-size: 12px; min-width: 48px; color: var(--text-3); }
+        .quiz-config-row input { width: 64px; }
+        .quiz-config-hint { font-size: 11px; color: var(--text-4); margin-top: 4px; }
+
+        /* Smart recommend */
+        .smart-recommend-row { margin: 10px 0 6px; }
+        .smart-recommend-btn {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 6px 14px; border-radius: var(--r-full);
+            font-size: 12px; font-weight: 500; font-family: var(--font);
+            background: var(--accent-soft); color: var(--accent);
+            border: 1px solid rgba(199,123,60,0.18); cursor: pointer;
+            transition: all 0.15s;
+        }
+        .smart-recommend-btn:hover { background: var(--accent); color: #fff; }
+        .smart-recommend-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Advanced */
+        .advanced-toggle {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 12px; color: var(--text-3); cursor: pointer; margin-top: 12px; user-select: none;
+        }
+        .advanced-toggle:hover { color: var(--accent); }
+        .advanced-options {
+            margin-top: 10px; padding: 14px; background: var(--bg-page); border-radius: var(--r-md); display: none;
+        }
+        .slider-row { display: flex; align-items: center; gap: 12px; }
+        .slider-row label { font-size: 12px; color: var(--text-3); white-space: nowrap; }
+        .slider-row input[type=range] { flex: 1; accent-color: var(--accent); }
+        .slider-row .slider-val { font-family: var(--mono); font-size: 12px; color: var(--text-2); min-width: 28px; }
+        .slider-hint { font-size: 11px; color: var(--text-4); margin-top: 6px; }
+
+        /* Result Card */
+        .result-card {
+            background: #fff; border: 1px solid var(--divider); border-radius: var(--r-lg);
+            padding: 24px; min-height: 400px;
+        }
+        .result-title { font-family: var(--display); font-size: 15px; font-weight: 700; margin-bottom: 18px; }
+
+        /* Empty — recent resources */
+        .recent-list { display: flex; flex-direction: column; gap: 6px; }
+        .recent-item {
+            display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+            border-radius: var(--r-md); border: 1px solid var(--divider);
+            text-decoration: none; transition: all 0.15s;
+        }
+        .recent-item:hover { border-color: var(--accent); background: var(--bg-hover); }
+        .recent-item-icon {
+            width: 32px; height: 32px; border-radius: var(--r-sm);
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            background: var(--accent-soft); color: var(--accent);
+        }
+        .recent-item-info { flex: 1; min-width: 0; }
+        .recent-item-title { font-size: 13px; font-weight: 500; color: var(--text-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .recent-item-meta { font-size: 11px; color: var(--text-3); display: flex; gap: 10px; }
+        .recent-item-arrow { color: var(--text-4); flex-shrink: 0; }
+
+        /* Progress */
+        .progress-section { padding: 24px 0; }
+        .progress-bar { height: 6px; background: var(--divider); border-radius: 3px; overflow: hidden; margin: 16px 0; }
+        .progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.4s var(--ease); }
+        .progress-text { font-size: 14px; color: var(--text-2); text-align: center; }
+        .batch-sub-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .batch-sub-label { font-size: 12px; min-width: 64px; color: var(--text-2); }
+        .batch-sub-bar { flex: 1; height: 5px; background: var(--divider); border-radius: 3px; overflow: hidden; }
+        .batch-sub-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+        .batch-sub-status { font-size: 11px; min-width: 36px; text-align: right; }
+
+        /* Result success */
+        .result-success { text-align: center; padding: 8px 0; }
+        .result-success-icon {
+            width: 48px; height: 48px; border-radius: 50%; background: var(--success-soft);
+            display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px;
+            color: var(--success);
+        }
+        .result-success-title { font-family: var(--display); font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+        .result-success-desc { font-size: 13px; color: var(--text-3); margin-bottom: 16px; }
+
+        /* Batch result tabs */
+        .batch-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--divider); margin-bottom: 16px; }
+        .batch-tab-btn {
+            padding: 8px 16px; border: none; background: none; cursor: pointer;
+            font-size: 13px; font-weight: 500; font-family: var(--font); color: var(--text-3);
+            border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s;
+        }
+        .batch-tab-btn:hover { color: var(--text-1); }
+        .batch-tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+        /* Content preview snippet */
+        .preview-snippet {
+            margin-top: 12px; padding: 12px 14px; background: var(--bg-page);
+            border-radius: var(--r-md); font-size: 13px; color: var(--text-2);
+            line-height: 1.6; max-height: 140px; overflow: hidden; position: relative;
+        }
+        .preview-snippet::after {
+            content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 32px;
+            background: linear-gradient(transparent, var(--bg-page));
+        }
+
+        .result-link-row { margin-top: 16px; }
+        .result-fail { padding: 16px; color: var(--danger); }
+        .result-fail strong { display: block; margin-bottom: 4px; }
+
+        /* Responsive */
+        @media (max-width: 860px) {
+            .content-grid { grid-template-columns: 1fr; }
+            .form-card { position: static; }
+            .res-type-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 640px) {
+            .res-type-grid { grid-template-columns: repeat(2, 1fr); }
+            .app-body { padding: 16px 12px 32px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="view">
+    <div class="app-layout">
+        <div class="app-content">
+        <div class="app-body">
+            <h1 class="page-title">生成学习资源</h1>
+            <p class="page-subtitle">选择知识点和资源类型，AI 自动生成个性化学习内容。</p>
+
+            <div class="content-grid">
+                <!-- Form -->
+                <div class="form-card">
+                    <div class="card-title">生成配置</div>
+
+                    <div class="form-group">
+                        <label class="form-label">选择知识点</label>
+                        <div class="kp-cascade" id="kp-cascade">
+                            <select class="form-select" id="kp-level-0">
+                                <option value="">加载中...</option>
+                            </select>
+                        </div>
+                        <div class="kp-selected-path" id="kp-selected-path"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">资源类型 <span style="font-size:12px;color:var(--text-3);font-weight:400;">(可多选)</span></label>
+                        <div class="smart-recommend-row">
+                            <button type="button" class="smart-recommend-btn" id="smart-recommend-btn" onclick="handleSmartRecommend()">
+                                <i data-lucide="sparkles" style="width:13px;height:13px;"></i> 智能推荐
+                            </button>
+                        </div>
+                        <div class="res-type-grid">
+                            <div class="res-type-card selected" data-type="doc" onclick="toggleResCard(this)">
+                                <i data-lucide="file-text"></i><span>学习文档</span>
+                                <div class="card-check"><i data-lucide="check" style="width:10px;height:10px;"></i></div>
+                                <input type="checkbox" name="resource_type" value="doc" checked style="display:none;">
+                            </div>
+                            <div class="res-type-card" data-type="mindmap" onclick="toggleResCard(this)">
+                                <i data-lucide="git-branch"></i><span>思维导图</span>
+                                <div class="card-check"><i data-lucide="check" style="width:10px;height:10px;"></i></div>
+                                <input type="checkbox" name="resource_type" value="mindmap" style="display:none;">
+                            </div>
+                            <div class="res-type-card" data-type="quiz" onclick="toggleResCard(this)">
+                                <i data-lucide="clipboard-list"></i><span>测验题目</span>
+                                <div class="card-check"><i data-lucide="check" style="width:10px;height:10px;"></i></div>
+                                <input type="checkbox" name="resource_type" value="quiz" style="display:none;">
+                            </div>
+                            <div class="res-type-card" data-type="code" onclick="toggleResCard(this)">
+                                <i data-lucide="code-2"></i><span>代码示例</span>
+                                <div class="card-check"><i data-lucide="check" style="width:10px;height:10px;"></i></div>
+                                <input type="checkbox" name="resource_type" value="code" style="display:none;">
+                            </div>
+                            <div class="res-type-card" data-type="summary" onclick="toggleResCard(this)">
+                                <i data-lucide="list-checks"></i><span>知识总结</span>
+                                <div class="card-check"><i data-lucide="check" style="width:10px;height:10px;"></i></div>
+                                <input type="checkbox" name="resource_type" value="summary" style="display:none;">
+                            </div>
+                            <div class="res-type-card" data-type="animation" onclick="toggleResCard(this)">
+                                <i data-lucide="play-circle"></i><span>动画演示</span>
+                                <div class="card-check"><i data-lucide="check" style="width:10px;height:10px;"></i></div>
+                                <input type="checkbox" name="resource_type" value="animation" style="display:none;">
+                            </div>
+                        </div>
+                        <!-- Quiz config -->
+                        <div class="quiz-config" id="quiz-config">
+                            <div class="quiz-config-row">
+                                <span>单选题</span>
+                                <input type="number" id="count-single" min="0" max="20" value="2" class="form-input" onchange="syncQuizTotal()">
+                                <span>多选题</span>
+                                <input type="number" id="count-multi" min="0" max="20" value="1" class="form-input" onchange="syncQuizTotal()">
+                            </div>
+                            <div class="quiz-config-row">
+                                <span>填空题</span>
+                                <input type="number" id="count-fill" min="0" max="20" value="1" class="form-input" onchange="syncQuizTotal()">
+                            </div>
+                            <div class="quiz-config-hint" id="quiz-total-hint">共 4 道（不超过20道）</div>
+                        </div>
+                    </div>
+
+                    <div class="advanced-toggle" onclick="document.getElementById('adv-options').style.display=document.getElementById('adv-options').style.display==='none'?'block':'none'">
+                        <i data-lucide="settings" style="width:12px;height:12px;"></i> 高级选项
+                    </div>
+                    <div class="advanced-options" id="adv-options">
+                        <div class="slider-row">
+                            <label>创意度</label>
+                            <input type="range" min="0" max="100" value="70">
+                            <span class="slider-val">0.7</span>
+                        </div>
+                        <div class="slider-hint">较低的值使生成更确定性，较高的值更有创意。</div>
+                    </div>
+
+                    <button class="btn btn-primary" id="generate-btn" style="margin-top:18px;width:100%;" onclick="handleGenerate()">开始生成</button>
+                </div>
+
+                <!-- Result -->
+                <div class="result-card" id="result-card">
+                    <div class="result-title">生成结果</div>
+                    <div id="result-empty">
+                        <div class="section-desc" style="margin-bottom:16px;">配置参数后点击「开始生成」，系统将为对应知识点创建个性化学习资源。</div>
+                        <div style="font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:10px;">最近生成</div>
+                        <div class="recent-list" id="recent-resources"><div class="empty-state" style="padding:16px;">暂无生成记录</div></div>
+                    </div>
+                    <div id="result-content" style="display:none;"></div>
+                    <div id="result-progress" style="display:none;">
+                        <div class="progress-section">
+                            <div class="progress-text" id="progress-text">正在生成资源…</div>
+                            <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+                        </div>
+                        <div id="batch-sub-progress"></div>
+                    </div>
+                    <div id="batch-result-tabs" style="display:none;">
+                        <div class="batch-tabs" id="batch-tab-bar"></div>
+                        <div id="batch-tab-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+    </div>
+
+    <script type="module">
+        import { isLoggedIn, getUserId, getKgGraph, startGeneration, getTaskStatus, startBatchGeneration, getBatchStatus, smartPlanResources, getResources } from './assets/api.js';
+        import { showToast } from './assets/toast.js';
+        import { registerPage, initSidebar } from './assets/nav.js';
+
+        if (!isLoggedIn()) { window.location.href = 'auth.html'; }
+        const userId = getUserId();
+        let _pollTimers = [];
+
+        async function init() {
+            initSidebar('generate');
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const prefillKp = urlParams.get('kp');
+            const prefillKpName = urlParams.get('kp_name');
+            const prefillType = urlParams.get('type');
+
+            loadRecentResources();
+
+            async function loadKgNodes() {
+                const graph = await getKgGraph({ depth: 5 });
+                if (!graph || !graph.nodes || !graph.nodes.length) {
+                    document.getElementById('kp-level-0').innerHTML = '<option value="">暂无可用知识点</option>';
+                    return;
+                }
+                const nodeMap = {};
+                graph.nodes.forEach(n => { nodeMap[n.id] = { ...n, children: [] }; });
+                const childSet = new Set();
+                (graph.edges || []).forEach(e => {
+                    if (e.relation === 'IS_PART_OF' && nodeMap[e.source_id] && nodeMap[e.target_id]) {
+                        nodeMap[e.target_id].children.push(nodeMap[e.source_id]);
+                        childSet.add(e.source_id);
+                    } else if (e.relation === 'CONTAINS' && nodeMap[e.source_id] && nodeMap[e.target_id]) {
+                        nodeMap[e.source_id].children.push(nodeMap[e.target_id]);
+                        childSet.add(e.target_id);
+                    }
+                });
+                const roots = graph.nodes.filter(n => !childSet.has(n.id)).map(n => nodeMap[n.id]);
+                const typePriority = { Course: 0, Chapter: 1, KnowledgePoint: 2, SubPoint: 3, Concept: 4 };
+                const sortNodes = (arr) => arr.sort((a, b) => (typePriority[a.type] || 9) - (typePriority[b.type] || 9) || a.name.localeCompare(b.name));
+                window._kgTree = { nodeMap, roots: sortNodes(roots) };
+                renderCascadeLevel(0, roots);
+                if (prefillKp) {
+                    let target = graph.nodes.find(n => n.id === prefillKp || n.name === prefillKp);
+                    if (!target) {
+                        try {
+                            const decodedKp = decodeURIComponent(prefillKp);
+                            target = graph.nodes.find(n => n.id === decodedKp || n.name === decodedKp);
+                        } catch(e) {}
+                    }
+                    if (!target && prefillKpName) {
+                        try { target = graph.nodes.find(n => n.name === decodeURIComponent(prefillKpName)); } catch(e) {}
+                    }
+                    if (target) selectNodeById(target.id);
+                }
+                if (prefillType) {
+                    const card = document.querySelector(`.res-type-card[data-type="${prefillType}"]`);
+                    if (card && !card.classList.contains('selected')) toggleResCard(card);
+                }
+            }
+
+            function renderCascadeLevel(level, nodes) {
+                const container = document.getElementById('kp-cascade');
+                const existing = container.querySelectorAll('.form-select');
+                for (let i = level; i < existing.length; i++) existing[i].remove();
+                if (!nodes || !nodes.length) { updateSelectedPath(); return; }
+                const typeLabels = { Course: '课程', Chapter: '章节', KnowledgePoint: '知识点', SubPoint: '子知识点', Concept: '概念' };
+                const typePriority = { Course: 0, Chapter: 1, KnowledgePoint: 2, SubPoint: 3, Concept: 4 };
+                const sorted = [...nodes].sort((a, b) => (typePriority[a.type] || 9) - (typePriority[b.type] || 9) || a.name.localeCompare(b.name));
+                const levelType = sorted[0]?.type;
+                const placeholder = typeLabels[levelType] || '下一级';
+                const sel = document.createElement('select');
+                sel.className = 'form-select';
+                sel.id = `kp-level-${level}`;
+                sel.innerHTML = `<option value="">-- 选择${placeholder} --</option>` +
+                    sorted.map(n => `<option value="${n.id}">${n.name}</option>`).join('');
+                sel.addEventListener('change', () => onCascadeChange(level));
+                container.appendChild(sel);
+                updateSelectedPath();
+            }
+
+            function onCascadeChange(level) {
+                const sel = document.getElementById(`kp-level-${level}`);
+                const nodeId = sel.value;
+                const container = document.getElementById('kp-cascade');
+                const existing = container.querySelectorAll('.form-select');
+                for (let i = level + 1; i < existing.length; i++) existing[i].remove();
+                if (nodeId && window._kgTree) {
+                    const node = window._kgTree.nodeMap[nodeId];
+                    if (node && node.children && node.children.length) {
+                        renderCascadeLevel(level + 1, node.children);
+                    }
+                }
+                updateSelectedPath();
+            }
+
+            function getSelectedKpId() {
+                const container = document.getElementById('kp-cascade');
+                const selects = container.querySelectorAll('.form-select');
+                let lastValue = '';
+                for (const sel of selects) { if (sel.value) lastValue = sel.value; }
+                return lastValue;
+            }
+
+            function getSelectedKpName() {
+                const container = document.getElementById('kp-cascade');
+                const selects = container.querySelectorAll('.form-select');
+                let lastName = '';
+                for (const sel of selects) {
+                    if (sel.value) { const opt = sel.options[sel.selectedIndex]; if (opt) lastName = opt.textContent; }
+                }
+                return lastName;
+            }
+
+            function updateSelectedPath() {
+                const container = document.getElementById('kp-cascade');
+                const pathEl = document.getElementById('kp-selected-path');
+                const selects = container.querySelectorAll('.form-select');
+                const parts = [];
+                for (const sel of selects) {
+                    if (sel.value) { const opt = sel.options[sel.selectedIndex]; if (opt) parts.push(opt.textContent); }
+                }
+                if (parts.length > 1) {
+                    pathEl.textContent = '路径：' + parts.join(' → ');
+                    pathEl.style.display = 'block';
+                } else {
+                    pathEl.style.display = 'none';
+                }
+            }
+
+            function selectNodeById(targetId) {
+                if (!window._kgTree) return;
+                const { nodeMap, roots } = window._kgTree;
+                const path = [];
+                const visited = new Set();
+                function findPath(nodes, id) {
+                    for (const n of nodes) {
+                        if (visited.has(n.id)) continue;
+                        visited.add(n.id);
+                        if (n.id === id) { path.push(n.id); return true; }
+                        if (n.children && n.children.length) {
+                            path.push(n.id);
+                            if (findPath(n.children, id)) return true;
+                            path.pop();
+                        }
+                    }
+                    return false;
+                }
+                if (!findPath(roots, targetId)) {
+                    // Node not reachable in tree (e.g. parent cut off by depth) — inject into cascade
+                    const orphan = nodeMap[targetId];
+                    if (orphan) {
+                        const sel = document.getElementById('kp-level-0');
+                        if (sel) {
+                            const opt = document.createElement('option');
+                            opt.value = orphan.id;
+                            opt.textContent = orphan.name;
+                            sel.appendChild(opt);
+                            roots.push(orphan);
+                            path.push(orphan.id);
+                        }
+                    }
+                }
+                for (let i = 0; i < path.length; i++) {
+                    const sel = document.getElementById(`kp-level-${i}`);
+                    if (sel) {
+                        sel.value = path[i];
+                        const node = nodeMap[path[i]];
+                        if (node && node.children && node.children.length && i < path.length - 1) {
+                            renderCascadeLevel(i + 1, node.children);
+                        }
+                    }
+                }
+                updateSelectedPath();
+            }
+
+            async function loadRecentResources() {
+                try {
+                    const data = await getResources(userId, { limit: 5 });
+                    const items = data?.items || [];
+                    const container = document.getElementById('recent-resources');
+                    if (!items.length) {
+                        container.innerHTML = '<div class="empty-state" style="padding:16px;">暂无生成记录</div>';
+                        return;
+                    }
+                    const iconMap = { doc: 'file-text', mindmap: 'git-branch', quiz: 'clipboard-list', code: 'code-2', summary: 'list-checks', animation: 'play-circle' };
+                    container.innerHTML = items.map(r => {
+                        const icon = iconMap[r.resource_type] || 'file';
+                        const time = r.created_at ? new Date(r.created_at).toLocaleDateString('zh-CN') : '';
+                        const kpName = r.kp_names?.join(', ') || r.kp_id || '';
+                        return `<a class="recent-item" href="library.html?preview=${r.id}">
+                            <div class="recent-item-icon"><i data-lucide="${icon}" style="width:14px;height:14px;"></i></div>
+                            <div class="recent-item-info">
+                                <div class="recent-item-title">${escHtml(r.title || r.resource_type)}</div>
+                                <div class="recent-item-meta">
+                                    ${kpName ? `<span>${escHtml(kpName)}</span>` : ''}
+                                    ${time ? `<span>${time}</span>` : ''}
+                                </div>
+                            </div>
+                            <i data-lucide="chevron-right" class="recent-item-arrow" style="width:14px;height:14px;"></i>
+                        </a>`;
+                    }).join('');
+                    lucide.createIcons();
+                } catch(e) { /* silent */ }
+            }
+
+            function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+            async function handleGenerate() {
+                const kpId = getSelectedKpId();
+                const kpName = getSelectedKpName();
+                const selectedTypes = getSelectedResourceTypes();
+
+                if (!kpId) { showToast('请选择知识点', 'warning'); return; }
+                if (selectedTypes.length === 0) { showToast('请至少选择一种资源类型', 'warning'); return; }
+
+                let numQuestions = 4;
+                let questionTypeCounts = null;
+                if (selectedTypes.includes('quiz')) {
+                    const single = parseInt(document.getElementById('count-single').value, 10) || 0;
+                    const multi = parseInt(document.getElementById('count-multi').value, 10) || 0;
+                    const fill = parseInt(document.getElementById('count-fill').value, 10) || 0;
+                    questionTypeCounts = { single, multi, fill };
+                    numQuestions = single + multi + fill;
+                    if (numQuestions <= 0 || numQuestions > 20) {
+                        showToast('题目总数需在 1-20 之间', 'warning');
+                        return;
+                    }
+                }
+
+                document.getElementById('result-empty').style.display = 'none';
+                document.getElementById('result-progress').style.display = 'block';
+                document.getElementById('result-content').style.display = 'none';
+                document.getElementById('batch-result-tabs').style.display = 'none';
+
+                const btn = document.getElementById('generate-btn');
+                btn.disabled = true;
+                btn.textContent = '生成中…';
+
+                try {
+                    if (selectedTypes.length === 1) {
+                        const task = await startGeneration(userId, kpId, selectedTypes[0], numQuestions, questionTypeCounts);
+                        if (!task || !task.task_id) throw new Error('生成任务创建失败');
+                        pollSingleTask(task.task_id, selectedTypes[0], btn);
+                    } else {
+                        const batch = await startBatchGeneration(userId, kpId, selectedTypes, numQuestions, questionTypeCounts);
+                        if (!batch || !batch.batch_id) throw new Error('批量生成任务创建失败');
+                        pollBatchTask(batch.batch_id, batch.tasks, btn);
+                    }
+                } catch (e) {
+                    showToast('生成失败: ' + e.message, 'error');
+                    btn.disabled = false; btn.textContent = '开始生成';
+                    document.getElementById('result-empty').style.display = '';
+                    document.getElementById('result-progress').style.display = 'none';
+                }
+            }
+
+            function pollSingleTask(taskId, resType, btn) {
+                let attempts = 0;
+                const poll = async () => {
+                    if (attempts++ > 200) {
+                        showToast('生成超时，请稍后刷新页面查看结果', 'warning');
+                        btn.disabled = false; btn.textContent = '开始生成';
+                        return;
+                    }
+                    const status = await getTaskStatus(taskId);
+                    if (!status) { _pollTimers.push(setTimeout(poll, 1500)); return; }
+                    const pct = status.progress || 0;
+                    document.getElementById('progress-fill').style.width = pct + '%';
+                    document.getElementById('progress-text').textContent = `生成中… ${pct}%`;
+                    if (status.status === 'done' || status.status === 'completed') {
+                        btn.disabled = false; btn.textContent = '开始生成';
+                        document.getElementById('result-progress').style.display = 'none';
+                        document.getElementById('result-content').style.display = 'block';
+                        document.getElementById('result-content').innerHTML = buildSuccessHTML([{ resource_type: resType, status: 'done' }]);
+                        lucide.createIcons();
+                        loadRecentResources();
+                    } else if (status.status === 'failed') {
+                        btn.disabled = false; btn.textContent = '开始生成';
+                        document.getElementById('result-progress').style.display = 'none';
+                        document.getElementById('result-empty').style.display = '';
+                        showToast('生成失败: ' + (status.error_message || '未知错误'), 'error');
+                    } else {
+                        _pollTimers.push(setTimeout(poll, 1500));
+                    }
+                };
+                poll();
+            }
+
+            const TYPE_LABELS = { doc: '学习文档', mindmap: '思维导图', quiz: '测验题目', code: '代码示例', summary: '知识总结', animation: '动画演示' };
+
+            function buildSuccessHTML(tasks) {
+                const typeIconMap = { doc: 'file-text', mindmap: 'git-branch', quiz: 'clipboard-list', code: 'code-2', summary: 'list-checks', animation: 'play-circle' };
+                const doneTypes = tasks.filter(t => t.status === 'done').map(t => TYPE_LABELS[t.resource_type] || t.resource_type).join('、');
+                return `<div class="result-success">
+                    <div class="result-success-icon"><i data-lucide="check-circle" style="width:24px;height:24px;"></i></div>
+                    <div class="result-success-title">生成完成</div>
+                    <div class="result-success-desc">${doneTypes} 已保存到资源库</div>
+                    <div class="result-link-row">
+                        <a class="btn btn-primary btn-sm" href="library.html"><i data-lucide="archive" style="width:12px;height:12px;"></i> 前往资源库</a>
+                        <button class="btn btn-secondary btn-sm" onclick="location.reload()" style="margin-left:8px;"><i data-lucide="plus" style="width:12px;height:12px;"></i> 继续生成</button>
+                    </div>
+                </div>`;
+            }
+
+            function pollBatchTask(batchId, initialTasks, btn) {
+                let attempts = 0;
+                const poll = async () => {
+                    if (attempts++ > 300) {
+                        showToast('生成超时', 'warning');
+                        btn.disabled = false; btn.textContent = '开始生成';
+                        return;
+                    }
+                    const batch = await getBatchStatus(batchId);
+                    if (!batch) { _pollTimers.push(setTimeout(poll, 1500)); return; }
+                    const pct = batch.progress || 0;
+                    document.getElementById('progress-fill').style.width = pct + '%';
+                    document.getElementById('progress-text').textContent = `批量生成中… ${pct}%`;
+                    const subEl = document.getElementById('batch-sub-progress');
+                    subEl.innerHTML = batch.tasks.map(t => {
+                        const label = TYPE_LABELS[t.resource_type] || t.resource_type;
+                        const statusText = t.status === 'done' ? '完成' : t.status === 'failed' ? '失败' : `${t.progress}%`;
+                        const color = t.status === 'done' ? 'var(--success)' : t.status === 'failed' ? 'var(--danger)' : 'var(--accent)';
+                        return `<div class="batch-sub-item">
+                            <span class="batch-sub-label">${label}</span>
+                            <div class="batch-sub-bar"><div class="batch-sub-fill" style="width:${t.progress}%;background:${color};"></div></div>
+                            <span class="batch-sub-status" style="color:${color};">${statusText}</span>
+                        </div>`;
+                    }).join('');
+                    if (batch.status === 'done' || batch.status === 'failed') {
+                        btn.disabled = false; btn.textContent = '开始生成';
+                        document.getElementById('result-progress').style.display = 'none';
+                        window._lastBatchTasks = batch.tasks;
+                        showBatchResults(batch.tasks);
+                    } else {
+                        _pollTimers.push(setTimeout(poll, 1500));
+                    }
+                };
+                poll();
+            }
+
+            function showBatchResults(tasks) {
+                const tabsContainer = document.getElementById('batch-result-tabs');
+                const tabBar = document.getElementById('batch-tab-bar');
+                const tabContent = document.getElementById('batch-tab-content');
+                tabsContainer.style.display = 'block';
+                tabBar.innerHTML = tasks.map((t, i) => {
+                    const label = TYPE_LABELS[t.resource_type] || t.resource_type;
+                    const isActive = i === 0;
+                    const icon = t.status === 'done' ? 'check-circle' : 'x-circle';
+                    const iconColor = t.status === 'done' ? 'var(--success)' : 'var(--danger)';
+                    return `<button onclick="switchBatchTab(${i})" class="batch-tab-btn${isActive ? ' active' : ''}" data-idx="${i}">
+                        <i data-lucide="${icon}" style="width:12px;height:12px;color:${iconColor};display:inline;vertical-align:-1px;margin-right:4px;"></i>${label}
+                    </button>`;
+                }).join('');
+                showTabContent(tasks, 0, tabContent);
+                lucide.createIcons();
+            }
+
+            function showTabContent(tasks, idx, container) {
+                const t = tasks[idx];
+                if (t.status === 'done') {
+                    const label = TYPE_LABELS[t.resource_type] || t.resource_type;
+                    container.innerHTML = `<div class="result-success">
+                        <div class="result-success-icon"><i data-lucide="check-circle" style="width:24px;height:24px;"></i></div>
+                        <div class="result-success-title">${label} 生成完成</div>
+                        <div class="result-success-desc">资源已保存到资源库</div>
+                        <a class="btn btn-primary btn-sm" href="library.html"><i data-lucide="archive" style="width:12px;height:12px;"></i> 前往资源库</a>
+                    </div>`;
+                } else {
+                    container.innerHTML = `<div class="result-fail">
+                        <strong>生成失败</strong>
+                        <span style="font-size:13px;">${t.error_message || '未知错误'}</span>
+                    </div>`;
+                }
+                lucide.createIcons();
+            }
+
+            window.switchBatchTab = function(idx) {
+                const btns = document.querySelectorAll('.batch-tab-btn');
+                btns.forEach(b => { b.classList.remove('active'); });
+                btns[idx]?.classList.add('active');
+                if (window._lastBatchTasks) {
+                    showTabContent(window._lastBatchTasks, idx, document.getElementById('batch-tab-content'));
+                }
+            };
+
+            function getSelectedResourceTypes() {
+                const checkboxes = document.querySelectorAll('input[name="resource_type"]:checked');
+                return Array.from(checkboxes).map(cb => cb.value);
+            }
+
+            async function handleSmartRecommend() {
+                const kpId = getSelectedKpId();
+                if (!kpId) { showToast('请先选择知识点', 'warning'); return; }
+                const btn = document.getElementById('smart-recommend-btn');
+                btn.disabled = true; btn.textContent = '推荐中…';
+                try {
+                    const result = await smartPlanResources(userId, kpId);
+                    if (result && result.resource_types) {
+                        document.querySelectorAll('.res-type-card').forEach(card => {
+                            const cb = card.querySelector('input[name="resource_type"]');
+                            const type = card.dataset.type;
+                            const shouldSelect = result.resource_types.includes(type);
+                            if (shouldSelect && !cb.checked) {
+                                cb.checked = true; card.classList.add('selected');
+                            } else if (!shouldSelect && cb.checked) {
+                                cb.checked = false; card.classList.remove('selected');
+                            }
+                        });
+                        updateQuizVisibility();
+                        updateGenerateButtonText();
+                    }
+                } catch (e) {
+                    showToast('智能推荐失败: ' + e.message, 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i data-lucide="sparkles" style="width:13px;height:13px;"></i> 智能推荐';
+                    lucide.createIcons();
+                }
+            }
+            window.handleSmartRecommend = handleSmartRecommend;
+
+            window.toggleResCard = function(card) {
+                const cb = card.querySelector('input[name="resource_type"]');
+                cb.checked = !cb.checked;
+                if (cb.checked) { card.classList.add('selected'); }
+                else { card.classList.remove('selected'); }
+                updateQuizVisibility();
+                updateGenerateButtonText();
+            };
+
+            window.handleGenerate = handleGenerate;
+            window.syncQuizTotal = function() {
+                const s = parseInt(document.getElementById('count-single').value, 10) || 0;
+                const m = parseInt(document.getElementById('count-multi').value, 10) || 0;
+                const f = parseInt(document.getElementById('count-fill').value, 10) || 0;
+                const total = s + m + f;
+                document.getElementById('quiz-total-hint').textContent = `共 ${total} 道（不超过20道）`;
+            };
+            function updateQuizVisibility() {
+                const quizChecked = document.querySelector('input[name="resource_type"][value="quiz"]')?.checked;
+                document.getElementById('quiz-config').style.display = quizChecked ? 'block' : 'none';
+                if (quizChecked) syncQuizTotal();
+            }
+            function updateGenerateButtonText() {
+                const count = getSelectedResourceTypes().length;
+                const btn = document.getElementById('generate-btn');
+                btn.textContent = count > 1 ? `批量生成 (${count}项)` : '开始生成';
+            }
+
+            loadKgNodes();
+        }
+
+        function destroy() {
+            _pollTimers.forEach(id => clearTimeout(id));
+            _pollTimers = [];
+        }
+
+        registerPage('generate', init, destroy);
+        init();
+    </script>
+    <script>lucide.createIcons();</script>
+    <script src="./assets/tracker.js"></script>
+    <script type="module" src="./assets/assistant.js"></script>
+</body>
+</html>
