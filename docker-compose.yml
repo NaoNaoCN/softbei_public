@@ -1,0 +1,38 @@
+# ============================================================
+# 一键配置样例数据库环境 — PostgreSQL 17 + pgvector
+# ============================================================
+# 用法：
+#   docker compose up -d
+#
+# 首次启动时，PostgreSQL 会自动执行 /docker-entrypoint-initdb.d/ 下的
+# submission_seed.sql，自动完成：构建 pgvector 扩展 → 建表 → 灌入知识库向量
+# + 演示账号 + 学生画像 + 知识图谱 + 学习路径。
+#
+# 连接信息（与项目 .env 对应）：
+#   DATABASE_URL=postgresql+asyncpg://postgres:softbei_demo@localhost:5432/softbei
+# ============================================================
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: softbei_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: softbei_demo
+      POSTGRES_DB: softbei
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      # 快照仅在数据目录为空（首次启动）时自动执行
+      - ./submission_seed.sql:/docker-entrypoint-initdb.d/01_submission_seed.sql:ro
+      - softbei_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d softbei"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  softbei_pgdata:

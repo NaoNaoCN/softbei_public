@@ -10,13 +10,13 @@ pydantic>=2.6.0
 pydantic-settings>=2.2.0
 
 # ---- 前端（HTML/CSS/JS，由 FastAPI StaticFiles 提供）----
-# （前端代码在 html-test/ 目录，无需 pip 安装）
+# （前端代码在 frontend/ 目录，无需 pip 安装）
 
 # ---- LLM & Agent ----
 langchain>=0.2.0
 langchain-community>=0.2.0
 langgraph>=0.1.0
-openai>=1.25.0          # 讯飞星火 API 兼容 OpenAI SDK
+openai>=1.25.0          # 通义千问/讯飞星火等兼容 OpenAI 协议的 API 客户端
 
 # ---- RAG / 向量检索 ----
 numpy>=1.26.0

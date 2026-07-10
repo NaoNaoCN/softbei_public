@@ -6,6 +6,7 @@
 /media
 /uploaded_docs
 debug_emails/
+_migrations_backup/
 
 # 环境变量
 .env

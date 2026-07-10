@@ -18,17 +18,6 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from backend.config import config
 
 # ===========================================================
-# 异常处理
-# ===========================================================
-
-_QUOTA_KEYWORDS = ("quota", "insufficient_quota", "arrearage", "balance is not enough")
-
-
-def _is_quota_error(exc: RateLimitError) -> bool:
-    return any(kw in str(exc).lower() for kw in _QUOTA_KEYWORDS)
-
-
-# ===========================================================
 # 客户端工厂
 # ===========================================================
 
@@ -48,6 +37,9 @@ def _make_client(provider: str) -> tuple[AsyncOpenAI, str]:
     """
     根据 provider 名称返回 (AsyncOpenAI client, default_model)。
     所有配置从 backend.config 读取。
+
+    Key 解析顺序：provider 专用 key（llm.providers.<name>.api_key）→ 全局 llm.api_key。
+    这样单 key 用户无需改动即可运行；多 provider 场景下每家可独立配 key。
     """
     t = config.llm.timeout
     _timeout = Timeout(connect=t.connect, read=t.read, write=t.write, pool=t.pool)
@@ -55,7 +47,7 @@ def _make_client(provider: str) -> tuple[AsyncOpenAI, str]:
     prov = _get_provider_config(provider)
     if prov and prov.base_url:
         return AsyncOpenAI(
-            api_key=config.llm.api_key,
+            api_key=prov.api_key or config.llm.api_key,
             base_url=prov.base_url,
             timeout=_timeout,
         ), prov.default_model or config.llm.model
@@ -72,9 +64,10 @@ def _make_client(provider: str) -> tuple[AsyncOpenAI, str]:
 # 核心调用接口
 # ===========================================================
 
-def _build_extra_body() -> dict | None:
-    """根据配置构建 extra_body，仅在 enable_thinking 非 None 时传入。"""
-    if config.llm.enable_thinking is not None:
+def _build_extra_body(provider: str) -> dict | None:
+    """构建 extra_body。enable_thinking 是 Qwen3 系列专有参数，
+    仅对 qwen provider 传入，避免其他 provider 收到不认识的参数而报 400。"""
+    if provider == "qwen" and config.llm.enable_thinking is not None:
         return {"enable_thinking": config.llm.enable_thinking}
     return None
 
@@ -108,28 +101,15 @@ async def chat_completion(
     client, default_model = _make_client(_provider)
     _model = model or default_model
     _max_tokens = max_tokens if max_tokens is not None else config.llm.default_max_tokens
-    _extra = _build_extra_body()
-    try:
-        response = await client.chat.completions.create(
-            model=_model,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=_max_tokens,
-            **({} if _extra is None else {"extra_body": _extra}),
-        )
-        return response.choices[0].message.content or ""
-    except RateLimitError as e:
-        if _provider == "qwen" and _is_quota_error(e):
-            client2, next_model = _make_client("qwen")
-            response = await client2.chat.completions.create(
-                model=next_model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=_max_tokens,
-                **({} if _extra is None else {"extra_body": _extra}),
-            )
-            return response.choices[0].message.content or ""
-        raise
+    _extra = _build_extra_body(_provider)
+    response = await client.chat.completions.create(
+        model=_model,
+        messages=messages,
+        temperature=temperature,
+        max_tokens=_max_tokens,
+        **({} if _extra is None else {"extra_body": _extra}),
+    )
+    return response.choices[0].message.content or ""
 
 
 async def stream_chat_completion(
@@ -144,37 +124,19 @@ async def stream_chat_completion(
     client, default_model = _make_client(_provider)
     _model = model or default_model
     _max_tokens = max_tokens if max_tokens is not None else config.llm.default_max_tokens
-    _extra = _build_extra_body()
-    try:
-        stream = await client.chat.completions.create(
-            model=_model,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=_max_tokens,
-            stream=True,
-            **({} if _extra is None else {"extra_body": _extra}),
-        )
-        async for chunk in stream:
-            delta = chunk.choices[0].delta
-            if delta.content:
-                yield delta.content
-    except RateLimitError as e:
-        if _provider == "qwen" and _is_quota_error(e):
-            client2, next_model = _make_client("qwen")
-            stream2 = await client2.chat.completions.create(
-                model=next_model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=_max_tokens,
-                stream=True,
-                **({} if _extra is None else {"extra_body": _extra}),
-            )
-            async for chunk in stream2:
-                delta = chunk.choices[0].delta
-                if delta.content:
-                    yield delta.content
-        else:
-            raise
+    _extra = _build_extra_body(_provider)
+    stream = await client.chat.completions.create(
+        model=_model,
+        messages=messages,
+        temperature=temperature,
+        max_tokens=_max_tokens,
+        stream=True,
+        **({} if _extra is None else {"extra_body": _extra}),
+    )
+    async for chunk in stream:
+        delta = chunk.choices[0].delta
+        if delta.content:
+            yield delta.content
 
 
 # Embedding API 客户端（单例复用连接池）
@@ -186,7 +148,7 @@ def _get_embedding_client() -> AsyncOpenAI:
     global _embedding_client
     if _embedding_client is None:
         _embedding_client = AsyncOpenAI(
-            api_key=config.llm.api_key,
+            api_key=config.embedding.api_key or config.llm.api_key,
             base_url=config.embedding.api_base_url,
             timeout=Timeout(
                 connect=config.embedding.timeout_connect,
@@ -201,7 +163,7 @@ def _get_embedding_client() -> AsyncOpenAI:
 async def get_embedding(text: str) -> list[float]:
     """
     获取文本的向量表示。
-    调用远程 Embedding API（DashScope text-embedding-v4）。
+    调用配置的 Embedding API（模型/地址/key 由 config.embedding 决定，可独立于 LLM provider）。
     失败时返回空向量，由 RAG 层降级为纯 LLM 生成。
     """
     try:
@@ -220,7 +182,7 @@ async def get_embeddings_batch(texts: list[str]) -> list[list[float]]:
     """
     批量获取文本向量表示。
     单次 API 调用发送多条文本，大幅减少 HTTP 往返次数。
-    DashScope text-embedding-v4 单次最多支持 25 条。
+    单次最大条数受 embedding.api_max_batch_size 限制（provider 相关）。
     """
     if not texts:
         return []
@@ -244,7 +206,7 @@ async def check_embedding_health() -> bool:
     """
     try:
         client = AsyncOpenAI(
-            api_key=config.llm.api_key,
+            api_key=config.embedding.api_key or config.llm.api_key,
             base_url=config.embedding.api_base_url,
             timeout=Timeout(connect=5, read=5, write=5, pool=5),
         )

@@ -42,6 +42,7 @@ class LLMProviderConfig(BaseModel):
     """单个 LLM Provider 配置"""
     base_url: str = ""
     default_model: str = ""
+    api_key: str = ""      # 该 provider 专用 key；留空则回退到全局 llm.api_key
 
 
 class LLMProvidersConfig(BaseModel):
@@ -88,6 +89,7 @@ class EmbeddingConfig(BaseModel):
     concurrency: int = 8
     api_model: str = "text-embedding-v4"
     api_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    api_key: str = ""      # Embedding 专用 key；留空则回退到全局 llm.api_key
     timeout_read: int = 60
     timeout_connect: int = 10
     timeout_write: int = 30
@@ -208,7 +210,7 @@ class StorageCleanupConfig(BaseModel):
 class StorageConfig(BaseModel):
     """文档存储配置"""
     upload_dir: str = "uploaded_docs"
-    knowledge_base_dir: str = "knowledge_base/ai_intro"
+    knowledge_base_dir: str = "knowledge_base"
     supported_extensions: list[str] = Field(default_factory=lambda: [".pdf", ".docx", ".doc", ".md", ".txt"])
     doc_id_hex_length: int = 12
     cleanup: StorageCleanupConfig = Field(default_factory=StorageCleanupConfig)

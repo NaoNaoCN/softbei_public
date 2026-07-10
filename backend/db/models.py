@@ -166,6 +166,14 @@ class DocumentChunk(Base):
         Index("ix_document_chunk_parent", "parent_chunk_id"),
         Index("ix_document_chunk_is_parent", "is_parent"),
         Index("ix_document_chunk_text_search", "text_search", postgresql_using="gin"),
+        # 向量检索 HNSW 索引（余弦距离，配合 vector.py 中 <=> 运算符与 hnsw.ef_search）
+        Index(
+            "ix_document_chunk_embedding_hnsw",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+            postgresql_with={"m": 16, "ef_construction": 200},
+        ),
     )
 
 
