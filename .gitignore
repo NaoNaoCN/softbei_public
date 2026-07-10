@@ -8,6 +8,10 @@
 debug_emails/
 _migrations_backup/
 
+# 制作提交快照时的一次性脚本（不进公开仓库）
+index_kb.py
+_prep_submission.ps1
+
 # 环境变量
 .env
 
