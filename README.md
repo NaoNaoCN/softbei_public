@@ -10,11 +10,11 @@
 本系统面向高等教育场景，通过 12 个 LangGraph Agent 协同为学生自动生成个性化学习资源，并根据学习行为动态更新学生画像和学习路径。提交包内置**《动手学深度学习》**课程知识库作为演示数据集。
 
 核心能力：
-- 对话式学习画像构建（8 个维度，自然语言采集，无需填表）
+- 对话式学习画像构建
 - 7 种个性化资源自动生成：知识讲解文档、思维导图、练习题、代码案例、要点总结、**p5.js 教学动画**、知识图谱
 - 基于知识图谱的学习路径规划与资源推送
-- RAG 增强生成，内容溯源至课程知识库，防止幻觉
-- 个性化学习计划表生成（基于知识点掌握度 + 遗忘曲线自动排程）
+- RAG 增强生成，生成内容可溯源至课程知识库
+- 个性化学习计划表生成
 - 学习小助手（番茄钟专注、激励语、微型对话、复习提醒）
 - 邮件服务（注册验证、学习报告推送）
 - 语音输入（智能对话支持语音转文字）
@@ -30,14 +30,14 @@ FastAPI 后端
   ├── LangGraph 多智能体编排
   ├── RAG 检索层（PostgreSQL pgvector + HNSW 索引）
   ├── 邮件服务
-  └── 数据层（SQLAlchemy 2.0 async + PostgreSQL + Alembic 迁移）
+  └── 数据层（SQLAlchemy 2.0 async + PostgreSQL）
 ```
 
 **主要依赖**
 
 | 层次 | 技术 |
 |------|------|
-| 前端 | HTML/CSS/JS、Aurora UI 设计系统、p5.js (动画) |
+| 前端 | HTML/CSS/JS、Aurora UI 设计系统、p5.js (动画) 、Echarts (知识图谱) |
 | 后端 | FastAPI、Uvicorn |
 | Agent 编排 | LangGraph |
 | LLM | OpenAI 兼容大模型服务 |
@@ -94,7 +94,9 @@ cp .env.example .env
 `.env.example` 中的 `DATABASE_URL` 已与 `docker-compose.yml` 对齐，**无需修改**。只需填写：
 
 ```bash
-LLM_API_KEY=<所用 LLM 服务的 API Key>   # LLM + Embedding 共用（默认 provider，见 configs/config.yaml）
+LLM_API_KEY=<所用 LLM 服务的 API Key>   # 默认 provider，详见 configs/config.yaml
+# SPARK_API_KEY | DEEPSEEK_API_KEY | QWEN_API_KEY | OPENAI_API_KEY=<对应 LLM 服务的 API Key> # 可选，作为备用provider在首选provider出错时自动切换
+EMBEDDING_API_KEY=<所用 Embedding 服务的 API Key>  # 此处需使用qwen文本向量化模型
 JWT_SECRET=<任意随机字符串> 
 ```
 
@@ -118,7 +120,7 @@ uvicorn backend.main:app --port 8000
 密  码：demo1234
 ```
 
-登录后仪表盘、学生画像、知识图谱、学习路径均已预置演示数据。可直接进入「资源生成」选择知识点（如"卷积神经网络"）现场生成学习文档 / 思维导图 / 练习题 / 教学动画，并观察 RAG 检索溯源至《动手学深度学习》原文。
+登录后仪表盘、学生画像、知识图谱、学习路径均已预置演示数据。可直接进入「资源生成」选择知识点（如"卷积神经网络"）现场生成学习文档 / 思维导图 / 练习题 / 教学动画，并观察 RAG 检索溯源至教材。
 
 ---
 
@@ -167,7 +169,7 @@ alembic upgrade head
 ### 4. 启动服务
 
 ```bash
-uvicorn backend.main:app --reload --port 8000
+uvicorn backend.main:app --port 8000
 ```
 
 启动后访问 `http://localhost:8000/app`。**首次启动时若向量库为空**，系统会自动递归索引 `knowledge_base/` 目录下的全部课程知识库（如 `knowledge_base/深度学习/`），子目录名即作为课程标签写入检索溯源元数据。首次索引需向 Embedding 服务发起数千次向量化请求，约需十余分钟，请耐心等待日志输出完成。

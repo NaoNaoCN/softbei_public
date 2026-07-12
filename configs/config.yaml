@@ -36,13 +36,14 @@ vector_db:
 # ----------------------------------------------------------
 llm:
   api_key: "${LLM_API_KEY}"      # 全局兜底 key；provider 未单独配置 key 时使用
-  provider: "qwen"               # 当前启用的 Provider：spark | deepseek | qwen | openai
-  # base_url / model 留空则由所选 provider 的 base_url / default_model 提供；
-  # 显式填写可覆盖（用于同一 provider 下临时指定其他模型）。
-  base_url: ""
-  model: ""
+  provider: "spark"               # 主 Provider：spark | deepseek | qwen | openai
+  # 级联 failover 顺序：按序尝试，当前 provider 退避重试全部耗尽后才切下一个。
+  # 留空 [] = 自动推导：主 provider 打头，其余「配了独立 key」的 provider 按 spark→deepseek→qwen→openai 顺序追加。
+  # 非空    = 显式覆盖：完全按此列表顺序尝试（仍会跳过非法名称/无可用 key 的项）。
+  # 两种情况下，非主 provider 都必须在 providers.<name>.api_key 配了独立 key 才生效，否则跳过。
+  provider_order: []
   default_max_tokens: 2048       # 默认最大输出 token 数
-  enable_thinking: false          # 深度思考开关（仅对支持的 Provider 生效，当前限 qwen）；非支持模型可设为 null
+  enable_thinking: false          # 深度思考开关（仅对部分支持的 Provider 生效）；非支持模型可设为 null
 
   # -- 重试策略 — 指数退避 --
   retry:
@@ -63,8 +64,8 @@ llm:
   # 要一键切换，只需把 llm.provider 改成下面任意一个键名。
   providers:
     spark:
-      base_url: "https://spark-api-open.xf-yun.com/v1"
-      default_model: "generalv3.5"
+      base_url: "https://spark-api-open.xf-yun.com/v2"
+      default_model: "spark-x"
       api_key: "${SPARK_API_KEY-}"
     deepseek:
       base_url: "https://api.deepseek.com/v1"
@@ -170,7 +171,10 @@ chat:
 # 知识图谱构建配置 — 从文档自动构建 KG
 # ----------------------------------------------------------
 knowledge_graph:
-  llm_concurrency: 10          # 构建时 LLM 并发上限（视 provider 的速率/额度限制调整）
+  llm_concurrency: 2           # 构建时 LLM 并发上限。注意：受限于 provider 的 QPS（每秒请求数），非"并发连接数"。
+                               # 讯飞星火"测试体验"套餐实测 QPS 上限=2（控制台"并发=20"指同时在飞连接数，与 QPS 无关）；
+                               # 请求约 1s/次，信号量=2 → 稳态≈1.9 QPS，压在红线下；瞬时撞线由 llm.py 的 11202 退避重试兜底。
+                               # 换更高 QPS 套餐或其他 provider 时可上调。
   max_batches: 30               # 送入 LLM 的最大文本批数
   toc_max_items: 100            # TOC 条目数上限（超出后裁剪）
   batch_chars_limit: 12000      # 每批最大字符数

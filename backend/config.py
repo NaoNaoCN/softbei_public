@@ -59,6 +59,7 @@ class LLMConfig(BaseModel):
     base_url: str = ""
     model: str = ""
     provider: str = "qwen"
+    provider_order: list[str] = Field(default_factory=list)  # 级联 failover 顺序；空=只用 provider，不切换
     default_max_tokens: int = 2048
     enable_thinking: bool | None = None  # Qwen3 深度思考开关；None=不传该参数（兼容非 Qwen3 模型）
     retry: LLMRetryConfig = Field(default_factory=LLMRetryConfig)

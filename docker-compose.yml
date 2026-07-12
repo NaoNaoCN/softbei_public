@@ -6,7 +6,7 @@
 #
 # 首次启动时，PostgreSQL 会自动执行 /docker-entrypoint-initdb.d/ 下的
 # submission_seed.sql，自动完成：构建 pgvector 扩展 → 建表 → 灌入知识库向量
-# + 演示账号 + 学生画像 + 知识图谱 + 学习路径。
+# + 演示账号 + 学生画像 + 知识图谱 + 学习路径 + 教材 doc 资源记录。
 #
 # 连接信息（与项目 .env 对应）：
 #   DATABASE_URL=postgresql+asyncpg://postgres:softbei_demo@localhost:5432/softbei
