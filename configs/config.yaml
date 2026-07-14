@@ -169,6 +169,8 @@ storage:
   knowledge_base_dir: "knowledge_base"   # 启动时自动索引的知识库根目录（递归扫描各课程子目录，子目录名即课程名）
   supported_extensions: [".pdf", ".docx", ".doc", ".md", ".txt"]
   doc_id_hex_length: 12                  # 文档 ID 的十六进制长度（从 MD5 截取）
+  upload_enabled: false                  # 云服务器暂不支持大文档索引，关闭上传功能；置 true 可恢复
+  upload_disabled_message: "云服务器资源有限，文档上传与索引功能暂时关闭，其余功能均可正常使用。"
 
   # -- 自动清理策略 --
   cleanup:

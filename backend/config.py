@@ -192,6 +192,8 @@ class StorageConfig(BaseModel):
     knowledge_base_dir: str = "knowledge_base"
     supported_extensions: list[str] = Field(default_factory=lambda: [".pdf", ".docx", ".doc", ".md", ".txt"])
     doc_id_hex_length: int = 12
+    upload_enabled: bool = True  # 为 false 时禁止上传并索引文档（其他功能不受影响）
+    upload_disabled_message: str = "文档上传与索引功能暂时关闭。"  # 上传被禁用时返回给前端的提示文案
     cleanup: StorageCleanupConfig = Field(default_factory=StorageCleanupConfig)
 
 

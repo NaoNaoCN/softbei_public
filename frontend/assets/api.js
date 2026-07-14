@@ -311,6 +311,11 @@ export async function getQuizAttempts(user_id, limit = 50) {
     return resp?.json();
 }
 
+export async function getClientConfig() {
+    const resp = await apiFetch('/config/client');
+    return resp?.json();
+}
+
 export async function getDocuments(user_id, skip, limit) {
     let url = `/documents?user_id=${encodeURIComponent(user_id)}`;
     if (skip !== undefined) url += `&skip=${skip}`;

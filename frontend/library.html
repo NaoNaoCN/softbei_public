@@ -614,7 +614,7 @@
     </script>
 
     <script type="module">
-        import { isLoggedIn, getUserId, clearAuth, getResourceStats, getResources, getResource, deleteResource, importDocumentAsync, getImportStatus, buildKg, getKgBuildStatusByDoc, postLearningRecord } from './assets/api.js?v=3';
+        import { isLoggedIn, getUserId, clearAuth, getResourceStats, getResources, getResource, deleteResource, importDocumentAsync, getImportStatus, buildKg, getKgBuildStatusByDoc, postLearningRecord, getClientConfig } from './assets/api.js?v=3';
         import { showToast } from './assets/toast.js';
         import { showDialog } from './assets/dialog.js';
         import { registerPage, initSidebar } from './assets/nav.js';
@@ -639,6 +639,8 @@
                     document.getElementById('tab-upload').style.display = target === 'upload' ? '' : 'none';
                 });
             });
+
+            applyUploadAvailability();
 
             let currentPage = 1;
         let currentFilter = '';
@@ -1022,7 +1024,44 @@
 
         const SUPPORTED_EXTENSIONS = ['.pdf', '.docx', '.doc', '.md', '.txt'];
 
+        let _uploadEnabled = true;
+        let _uploadDisabledMsg = '';
+
+        // 根据服务端开关决定上传区域是否可用；关闭时展示提示并禁用交互，其余功能不受影响
+        async function applyUploadAvailability() {
+            try {
+                const cfg = await getClientConfig();
+                if (!cfg) return;
+                _uploadEnabled = cfg.upload_enabled !== false;
+                _uploadDisabledMsg = cfg.upload_disabled_message || '文档上传功能暂时关闭。';
+            } catch (e) {
+                return;  // 拉取失败时保持默认（可用），避免误伤
+            }
+            if (_uploadEnabled) return;
+
+            const area = document.querySelector('.import-area');
+            if (area) {
+                area.onclick = null;
+                area.style.cursor = 'not-allowed';
+                area.style.opacity = '0.6';
+                const textEl = area.querySelector('.import-text');
+                if (textEl) textEl.textContent = _uploadDisabledMsg;
+            }
+            const fileInput = document.getElementById('file-input');
+            if (fileInput) fileInput.disabled = true;
+            const importBtn = document.getElementById('import-btn');
+            if (importBtn) {
+                importBtn.disabled = true;
+                importBtn.textContent = '暂不可用';
+            }
+        }
+
         function handleFileSelect(input) {
+            if (!_uploadEnabled) {
+                showToast(_uploadDisabledMsg, 'error');
+                input.value = '';
+                return;
+            }
             if (input.files[0]) {
                 const name = input.files[0].name.toLowerCase();
                 const ext = '.' + name.split('.').pop();
@@ -1037,6 +1076,10 @@
         }
 
         async function handleImport() {
+            if (!_uploadEnabled) {
+                showToast(_uploadDisabledMsg, 'error');
+                return;
+            }
             const fileInput = document.getElementById('file-input');
             const file = fileInput.files[0];
             if (!file) return;

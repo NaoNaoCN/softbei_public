@@ -214,6 +214,16 @@ async def health():
     }
 
 
+@app.get("/config/client", tags=["system"])
+async def client_config():
+    """返回前端所需的运行时开关（无需鉴权）。"""
+    return {
+        "upload_enabled": app_config.storage.upload_enabled,
+        "upload_disabled_message": app_config.storage.upload_disabled_message,
+        "supported_extensions": app_config.storage.supported_extensions,
+    }
+
+
 # 用户认证
 # 内存限流：{user_id: [timestamp, ...]}
 _rate_limit_store: dict[int, list[datetime]] = {}
@@ -1796,6 +1806,11 @@ async def import_document(
     - 索引到向量库（供 RAG 检索使用）
     - 创建资源记录到数据库
     """
+    if not app_config.storage.upload_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=app_config.storage.upload_disabled_message,
+        )
     file_name = file.filename or "unknown"
     suffix = file_name.lower().rsplit(".", 1)[-1] if "." in file_name else ""
     if f".{suffix}" not in document_svc.SUPPORTED_SUFFIXES:
@@ -1841,6 +1856,11 @@ async def import_document_async(
     异步导入文档（支持 PDF / DOCX / DOC / Markdown / TXT）。
     立即返回 task_id，前端轮询 /documents/import/{task_id}/status。
     """
+    if not app_config.storage.upload_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=app_config.storage.upload_disabled_message,
+        )
     logger.info(f"[import_document_async] received title={title!r}, file.filename={file.filename!r}")
     file_name = file.filename or "unknown"
     suffix = file_name.lower().rsplit(".", 1)[-1] if "." in file_name else ""
