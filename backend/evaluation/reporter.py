@@ -1,8 +1,4 @@
-"""
-backend/evaluation/reporter.py
-RAG 评估报告生成器：聚合采集数据，生成日报/周报/Markdown 报告，
-并支持将报告写入 logs/ 目录。
-"""
+"""RAG 评估报告生成器：聚合采集数据，生成日报/周报/Markdown 报告。"""
 
 from __future__ import annotations
 
@@ -42,10 +38,6 @@ class RAGReporter:
             output_dir = str(_Path(__file__).parent.parent.parent / _cfg.logging.dir)
         self._output_dir = output_dir
 
-    # ----------------------------------------------------------
-    # 报告生成
-    # ----------------------------------------------------------
-
     def generate_report(
         self,
         records: list[GenerationEvalRecord],
@@ -67,12 +59,10 @@ class RAGReporter:
                 total_queries=0,
             )
 
-        # 确定时间范围
         timestamps = [r.timestamp for r in records if r.timestamp]
         start = period_start or (min(timestamps) if timestamps else datetime.utcnow())
         end = period_end or (max(timestamps) if timestamps else datetime.utcnow())
 
-        # === 检索质量 ===
         all_relevance_labels = [
             r.relevance_labels for r in records if r.relevance_labels
         ]
@@ -85,7 +75,6 @@ class RAGReporter:
                 total_rel = sum(1 for v in labels if v > 0)
                 recall_scores.append(recall_at_k(labels, total_rel, k) if total_rel > 0 else 0.0)
 
-        # 从 retrieval_record 提取分数分布
         all_retrieval_scores: list[float] = []
         retrieval_latencies: list[float] = []
         for r in records:
@@ -97,7 +86,6 @@ class RAGReporter:
 
         score_dist = score_distribution(all_retrieval_scores)
 
-        # === 生成质量 ===
         faithfulness_scores = [
             r.faithfulness_score for r in records
             if r.faithfulness_score is not None
@@ -114,7 +102,6 @@ class RAGReporter:
             if r.completeness_score is not None
         ]
 
-        # === 系统效率 ===
         gen_latencies = [
             r.generation_latency_ms for r in records
             if r.generation_latency_ms > 0
@@ -132,7 +119,6 @@ class RAGReporter:
                 return 0.0
             return vals[int(len(vals) * 0.95)]
 
-        # === 变化趋势 ===
         delta: dict[str, float] = {}
         if self._last_report is not None:
             prev = self._last_report
@@ -150,31 +136,23 @@ class RAGReporter:
             period_start=start,
             period_end=end,
             total_queries=len(records),
-            # 检索质量
             precision_at_5=round(sum(precision_scores) / len(precision_scores), 4) if precision_scores else 0.0,
             recall_at_5=round(sum(recall_scores) / len(recall_scores), 4) if recall_scores else 0.0,
             mrr_val=round(mrr(all_relevance_labels), 4) if all_relevance_labels else 0.0,
             ndcg_at_5=round(sum(ndcg_at_k(labels, k) for labels in all_relevance_labels) / len(all_relevance_labels), 4) if all_relevance_labels else 0.0,
             hit_rate_val=round(hit_rate(all_relevance_labels, k), 4) if all_relevance_labels else 0.0,
             score_p50=round(score_dist.get("p50", 0.0), 4),
-            # 生成质量
             avg_faithfulness=round(sum(faithfulness_scores) / len(faithfulness_scores), 4) if faithfulness_scores else 0.0,
             avg_hallucination_rate=round(sum(hallucination_rates) / len(hallucination_rates), 4) if hallucination_rates else 0.0,
             avg_concept_coverage=round(sum(concept_coverages) / len(concept_coverages), 4) if concept_coverages else 0.0,
-            # 系统效率
             p50_retrieval_latency_ms=round(_p50(ret_latencies_sorted), 1),
             p95_retrieval_latency_ms=round(_p95(ret_latencies_sorted), 1),
             p50_generation_latency_ms=round(_p50(gen_latencies_sorted), 1),
-            # 变化趋势
             delta_vs_previous=delta,
         )
 
         self._last_report = report
         return report
-
-    # ----------------------------------------------------------
-    # 周报 / 日报
-    # ----------------------------------------------------------
 
     def generate_daily_report(
         self,
@@ -195,10 +173,6 @@ class RAGReporter:
         start = now - timedelta(days=7)
         weekly = [r for r in records if r.timestamp and r.timestamp >= start]
         return self.generate_report(weekly, period_start=start, period_end=now)
-
-    # ----------------------------------------------------------
-    # 渲染
-    # ----------------------------------------------------------
 
     def to_markdown(self, report: RAGEvalReport) -> str:
         """将报告渲染为 Markdown 格式字符串。"""
@@ -236,7 +210,6 @@ class RAGReporter:
             f"| P50 Generation Latency | {report.p50_generation_latency_ms:.0f} ms | < 5000 ms | {_check_reference(report.p50_generation_latency_ms, '< 5000')} |",
         ]
 
-        # 变化趋势
         if report.delta_vs_previous:
             lines.append("")
             lines.append("## 变化趋势（与上期对比）")
@@ -259,10 +232,6 @@ class RAGReporter:
             f"P50_ret={report.p50_retrieval_latency_ms:.0f}ms "
             f"P50_gen={report.p50_generation_latency_ms:.0f}ms"
         )
-
-    # ----------------------------------------------------------
-    # 文件落盘
-    # ----------------------------------------------------------
 
     def save_to_disk(
         self,
@@ -305,10 +274,6 @@ class RAGReporter:
         )
         return filepath
 
-
-# ----------------------------------------------------------
-# 内部辅助
-# ----------------------------------------------------------
 
 def _check_reference(value: float, ref_str: str) -> str:
     """

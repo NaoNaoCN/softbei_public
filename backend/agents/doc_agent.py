@@ -1,7 +1,4 @@
-"""
-backend/agents/doc_agent.py
-DocAgent：基于 RAG 生成结构化学习文档（Markdown 格式）。
-"""
+"""DocAgent：基于 RAG 生成结构化学习文档（Markdown 格式）。"""
 
 from __future__ import annotations
 
@@ -23,26 +20,16 @@ SYSTEM_PROMPT = _prompts.get("agents.doc.system_prompt")
 
 
 async def run(state: AgentState, config: RunnableConfig = None) -> AgentState:
-    """
-    DocAgent 节点入口。
-
-    职责：
-    1. 调用 retriever 检索知识点相关文档片段
-    2. 构造 RAG prompt，调用 LLM 生成 Markdown 文档
-    3. 将 draft_content 写入 state
-    """
-    # 获取 kp_name（从 DB 解析 ID → 名称）
+    """DocAgent 节点入口：检索知识点相关文档并调用 LLM 生成结构化 Markdown 文档。"""
     kp_name = await resolve_kp_name(state, config)
     logger.info(f"[DocAgent] kp_name={kp_name}")
-    # 检索相关文档（return_sources：拿到真实来源清单用于文末追加参考资料）
+    # return_sources：拿到真实来源清单用于文末追加参考资料
     context, retrieved_texts, sources = await retrieve_context(
         state, "DocAgent", config, return_sources=True
     )
 
-    # 更新 retrieved_docs
     state = state.model_copy(update={"retrieved_docs": retrieved_texts})
 
-    # 构造 prompt
     prompt = SYSTEM_PROMPT.format(context=context, kp_name=kp_name)
 
     try:
@@ -54,7 +41,7 @@ async def run(state: AgentState, config: RunnableConfig = None) -> AgentState:
             ),
             search_videos(kp_name),
         )
-        # 后处理：先追加真实来源清单（编号与正文 [n] 对齐），再注入视频引用
+        # 后处理顺序敏感：先追加真实来源清单（编号与正文 [n] 对齐），再注入视频引用
         draft += format_reference_list(sources)
         if videos:
             draft = inject_video_citations(draft, videos)

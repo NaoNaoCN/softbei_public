@@ -1,8 +1,4 @@
-"""
-backend/db/models.py
-SQLAlchemy 2.x ORM 模型定义（13 张表）。
-所有模型继承 Base，模块被导入后自动注册到 Base.metadata。
-"""
+"""SQLAlchemy 2.x ORM 模型定义（13 张表）。"""
 
 from __future__ import annotations
 
@@ -30,10 +26,6 @@ from backend.db.database import Base
 from backend.utils.snowflake import generate_id, string_to_id
 
 
-# ----------------------------------------------------------
-# 1. User
-# ----------------------------------------------------------
-
 class User(Base):
     __tablename__ = "user"
 
@@ -52,10 +44,6 @@ class User(Base):
     learning_records: Mapped[list["LearningRecord"]] = relationship(back_populates="user")
     study_plans: Mapped[list["StudyPlan"]] = relationship(back_populates="user")
 
-
-# ----------------------------------------------------------
-# 2. StudentProfile + ProfileHistory
-# ----------------------------------------------------------
 
 class StudentProfile(Base):
     __tablename__ = "student_profile"
@@ -92,10 +80,6 @@ class ProfileHistory(Base):
     profile: Mapped["StudentProfile"] = relationship(back_populates="history")
 
 
-# ----------------------------------------------------------
-# 3. ChatSession
-# ----------------------------------------------------------
-
 class ChatSession(Base):
     __tablename__ = "chat_session"
 
@@ -111,10 +95,6 @@ class ChatSession(Base):
 
     user: Mapped["User"] = relationship(back_populates="sessions")
 
-
-# ----------------------------------------------------------
-# 3b. ChatMessage（取代动态 per-session 消息表）
-# ----------------------------------------------------------
 
 class ChatMessage(Base):
     __tablename__ = "chat_message"
@@ -136,10 +116,6 @@ class ChatMessage(Base):
         Index("ix_chat_message_session_time", "session_id", "created_at"),
     )
 
-
-# ----------------------------------------------------------
-# 3c. DocumentChunk（向量存储）
-# ----------------------------------------------------------
 
 class DocumentChunk(Base):
     __tablename__ = "document_chunk"
@@ -177,10 +153,6 @@ class DocumentChunk(Base):
     )
 
 
-# ----------------------------------------------------------
-# 4. KGNode + KGEdge（知识图谱）
-# ----------------------------------------------------------
-
 class KGNode(Base):
     __tablename__ = "kg_node"
     __table_args__ = (
@@ -217,10 +189,6 @@ class KGEdge(Base):
     source_node: Mapped["KGNode"] = relationship(back_populates="out_edges", foreign_keys=[source_id])
     target_node: Mapped["KGNode"] = relationship(back_populates="in_edges", foreign_keys=[target_id])
 
-
-# ----------------------------------------------------------
-# 5. ResourceMeta + GenerationTask
-# ----------------------------------------------------------
 
 class ResourceMeta(Base):
     __tablename__ = "resource_meta"
@@ -282,10 +250,6 @@ class GenerationTask(Base):
     batch: Mapped["GenerationBatch | None"] = relationship(back_populates="tasks")
 
 
-# ----------------------------------------------------------
-# 5b. KGBuildTask（知识图谱构建任务）
-# ----------------------------------------------------------
-
 class KGBuildTask(Base):
     __tablename__ = "kg_build_task"
     __table_args__ = (
@@ -305,10 +269,6 @@ class KGBuildTask(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-
-# ----------------------------------------------------------
-# 6. QuizItem + QuizAttempt
-# ----------------------------------------------------------
 
 class QuizItem(Base):
     __tablename__ = "quiz_item"
@@ -349,10 +309,6 @@ class QuizAttempt(Base):
     quiz_item: Mapped["QuizItem"] = relationship(back_populates="attempts")
 
 
-# ----------------------------------------------------------
-# 7. LearningPath + LearningPathItem
-# ----------------------------------------------------------
-
 class LearningPath(Base):
     __tablename__ = "learning_path"
 
@@ -385,10 +341,6 @@ class LearningPathItem(Base):
     kp: Mapped["KGNode"] = relationship()
 
 
-# ----------------------------------------------------------
-# 8. LearningRecord
-# ----------------------------------------------------------
-
 class LearningRecord(Base):
     __tablename__ = "learning_record"
     __table_args__ = (
@@ -408,10 +360,6 @@ class LearningRecord(Base):
     user: Mapped["User"] = relationship(back_populates="learning_records")
     resource: Mapped["ResourceMeta | None"] = relationship(back_populates="learning_records")
 
-
-# ----------------------------------------------------------
-# 9. StudyPlan + StudyPlanItem（个性化学习计划表）
-# ----------------------------------------------------------
 
 class StudyPlan(Base):
     """学习计划表：基于画像与已有学习路径生成的、按日期排程的学习安排。"""
@@ -476,10 +424,6 @@ class StudyPlanItem(Base):
     plan: Mapped["StudyPlan"] = relationship(back_populates="items")
     kp: Mapped["KGNode | None"] = relationship()
 
-
-# ----------------------------------------------------------
-# 10. EmailVerification（邮箱验证 & 密码重置 Token）
-# ----------------------------------------------------------
 
 class EmailVerification(Base):
     __tablename__ = "email_verification"

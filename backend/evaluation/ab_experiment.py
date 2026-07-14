@@ -1,9 +1,6 @@
-"""
-backend/evaluation/ab_experiment.py
-Layer 4 A/B 实验框架：对比两个配置组在相同查询上的 RAG 质量。
+"""Layer 4 A/B 实验框架：对比两个配置组在相同查询上的 RAG 质量。
 
 用法：
-    # 运行 A/B 实验
     python -m backend.evaluation.ab --group-a baseline --group-b chunk_size_800 \\
         --queries backend/evaluation/golden_queries.yaml
 
@@ -25,10 +22,6 @@ from loguru import logger
 from backend.config import config
 from backend.evaluation.models import ABExperimentResult
 
-
-# ===========================================================
-# 实验执行
-# ===========================================================
 
 async def run_ab_experiment(
     group_a: str,
@@ -54,7 +47,6 @@ async def run_ab_experiment(
     :param n_results:      检索条数
     :return:               A/B 对比结果
     """
-    # 加载查询
     if golden_path and not queries:
         from backend.evaluation.golden_dataset import load_golden_queries
         gqs = load_golden_queries(golden_path)
@@ -69,14 +61,12 @@ async def run_ab_experiment(
         f"{len(queries)} 条查询, retrieval_only={retrieval_only}"
     )
 
-    # 运行两组评估
     logger.info(f"[ABExperiment] 运行对照组: {group_a}")
     metrics_a = await _run_group(queries, kp_names or queries, group_a, retrieval_only, n_results)
 
     logger.info(f"[ABExperiment] 运行实验组: {group_b}")
     metrics_b = await _run_group(queries, kp_names or queries, group_b, retrieval_only, n_results)
 
-    # 计算 delta
     metric_deltas: dict[str, dict] = {}
     for key in metrics_a:
         a_val = metrics_a[key]
@@ -90,7 +80,6 @@ async def run_ab_experiment(
             "pct_change": round(pct, 1),
         }
 
-    # 生成结论
     improvements = []
     regressions = []
     for name, d in metric_deltas.items():
@@ -146,7 +135,6 @@ async def _run_group(
             all_n_retrieved.append(len(chunks))
 
             if not retrieval_only and chunks:
-                # 生成 + Judge
                 from backend.services.llm import chat_completion
                 from backend.evaluation.judge import get_judge
 
@@ -177,7 +165,6 @@ async def _run_group(
         except Exception as e:
             logger.warning(f"[ABExperiment] 查询失败 [{group_label}] {query[:40]}: {e}")
 
-    # 聚合
     n = len(queries)
     metrics: dict[str, float] = {
         "avg_n_retrieved": sum(all_n_retrieved) / n if n else 0,
@@ -192,10 +179,6 @@ async def _run_group(
 
     return metrics
 
-
-# ===========================================================
-# 报告
-# ===========================================================
 
 def format_ab_report(result: ABExperimentResult) -> str:
     """将 A/B 实验结果渲染为 Markdown 对比报告。"""
@@ -226,10 +209,6 @@ def format_ab_report(result: ABExperimentResult) -> str:
     return "\n".join(lines)
 
 
-# ===========================================================
-# CLI
-# ===========================================================
-
 def main():
     parser = argparse.ArgumentParser(description="RAG A/B 实验")
     parser.add_argument("--group-a", type=str, required=True, help="对照组标签")
@@ -252,7 +231,6 @@ def main():
     md = format_ab_report(result)
     print(md)
 
-    # 写入文件
     from pathlib import Path
     out_dir = Path(__file__).parent.parent.parent / "logs"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -264,3 +242,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

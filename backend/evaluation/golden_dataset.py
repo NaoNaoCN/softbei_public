@@ -1,17 +1,4 @@
-"""
-backend/evaluation/golden_dataset.py
-Layer 3 黄金测试集：批量离线评估 + 回归检测。
-
-用法：
-    # 运行完整黄金测试集评估
-    python -m backend.evaluation.golden --run
-
-    # 指定测试集文件
-    python -m backend.evaluation.golden --run --dataset path/to/golden.yaml
-
-    # 仅显示测试集概要
-    python -m backend.evaluation.golden --info
-"""
+"""Layer 3 黄金测试集：批量离线评估 + 回归检测。"""
 
 from __future__ import annotations
 
@@ -33,10 +20,6 @@ from backend.evaluation.models import (
 from backend.evaluation.metrics import ndcg_at_k, recall_at_k, mrr, hit_rate
 
 
-# ===========================================================
-# 加载
-# ===========================================================
-
 def load_golden_queries(path: str | None = None) -> list[GoldenQuery]:
     """从 YAML 文件加载黄金测试集。"""
     file_path = Path(path or config.evaluation.golden_dataset.path)
@@ -57,10 +40,6 @@ def load_golden_queries(path: str | None = None) -> list[GoldenQuery]:
     logger.info(f"[GoldenDataset] 加载 {len(queries)} 条黄金查询 from {file_path}")
     return queries
 
-
-# ===========================================================
-# 批量评估
-# ===========================================================
 
 async def run_golden_evaluation(
     queries: list[GoldenQuery] | None = None,
@@ -99,15 +78,14 @@ async def run_golden_evaluation(
         t_start = time.perf_counter()
 
         try:
-            # 检索
             chunks = await retrieve_by_kp(
                 gq.kp_name,
                 n_results=n_results,
             )
             retrieved_texts = [c.text for c in chunks]
 
-            # 生成回答 — 使用与 Agent 管线一致的 system prompt 结构
-            # 包含反幻觉指令，确保评估结果能反映 Agent 实际生成质量
+            # 使用与 Agent 管线一致的 system prompt 结构（含反幻觉指令），
+            # 确保评估结果能反映 Agent 实际生成质量
             from backend.services.llm import chat_completion
 
             context = "\n\n---\n\n".join(
@@ -138,7 +116,6 @@ async def run_golden_evaluation(
                 max_tokens=2000,
             )
 
-            # LLM Judge
             eval_result = await judge.evaluate_full(
                 query=gq.query,
                 kp_name=gq.kp_name,
@@ -148,7 +125,6 @@ async def run_golden_evaluation(
 
             eval_time = (time.perf_counter() - t_start) * 1000
 
-            # 判断是否通过最低标准
             faith_pass = eval_result["faithfulness_score"] >= gq.min_faithfulness
             comp_pass = eval_result["completeness_score"] >= gq.min_completeness
             if faith_pass and comp_pass:
@@ -161,7 +137,6 @@ async def run_golden_evaluation(
                     f"completeness={eval_result['completeness_score']:.2f} (min={gq.min_completeness})"
                 )
 
-            # 计算逐条检索指标
             rel_labels = eval_result.get("relevance_labels", [])
             p5 = eval_result.get("precision_at_5", 0.0)
             # 黄金测试集无 ground truth total_relevant，以 k=5 为分母
@@ -173,17 +148,14 @@ async def run_golden_evaluation(
                 query_id=gq.id,
                 kp_name=gq.kp_name,
                 query=gq.query,
-                # 检索层
                 precision_at_5=p5,
                 recall_at_5=r5,
                 ndcg_at_5=n5,
                 relevance_labels=rel_labels,
-                # 生成层
                 faithfulness_score=eval_result["faithfulness_score"],
                 completeness_score=eval_result["completeness_score"],
                 hallucination_rate=eval_result.get("hallucination_rate", 0.0),
                 citation_precision=eval_result.get("citation_precision"),
-                # 通过/失败
                 faithfulness_pass=faith_pass,
                 completeness_pass=comp_pass,
                 evaluation_time_ms=round(eval_time, 1),
@@ -200,7 +172,6 @@ async def run_golden_evaluation(
                 completeness_pass=False,
             ))
 
-    # 聚合报告
     report = _build_report(per_query_results, passed, failed)
     return report
 
@@ -217,17 +188,15 @@ def _build_report(
             regression_details=["无有效评估结果"],
         )
 
-    # 检索层 — 逐条平均
     prec_scores = [r.precision_at_5 for r in results if r.precision_at_5 > 0]
     recall_scores = [r.recall_at_5 for r in results if r.recall_at_5 > 0]
     ndcg_scores = [r.ndcg_at_5 for r in results if r.ndcg_at_5 > 0]
 
-    # 检索层 — 跨查询计算（MRR / Hit Rate 依赖所有查询的 relevance_labels）
+    # MRR / Hit Rate 依赖所有查询的 relevance_labels，需跨查询计算
     all_rel_labels = [r.relevance_labels for r in results if r.relevance_labels]
     mrr_val = mrr(all_rel_labels) if all_rel_labels else 0.0
     hit_val = hit_rate(all_rel_labels, 5) if all_rel_labels else 0.0
 
-    # 生成层 — 逐条平均
     faith_scores = [r.faithfulness_score for r in results if r.faithfulness_score > 0]
     comp_scores = [r.completeness_score for r in results if r.completeness_score > 0]
     hallu_scores = [r.hallucination_rate for r in results]
@@ -245,13 +214,11 @@ def _build_report(
         total_queries=len(results),
         passed=passed,
         failed=failed,
-        # 检索层
         avg_precision_at_5=round(avg_prec, 4),
         avg_recall_at_5=round(avg_recall, 4),
         avg_ndcg_at_5=round(avg_ndcg, 4),
         mrr=round(mrr_val, 4),
         hit_rate_at_5=round(hit_val, 4),
-        # 生成层
         avg_faithfulness=round(avg_faith, 4),
         avg_completeness=round(avg_comp, 4),
         avg_hallucination_rate=round(avg_hallu, 4),
@@ -259,15 +226,10 @@ def _build_report(
         per_query_results=results,
     )
 
-    # 回归检测：与上次运行对比
     _detect_regression(report)
 
     return report
 
-
-# ===========================================================
-# 回归检测
-# ===========================================================
 
 _LAST_RUN_FILE = Path(__file__).parent.parent.parent / "logs" / "golden_last_run.json"
 
@@ -313,7 +275,6 @@ def _detect_regression(report: GoldenRegressionReport) -> None:
         except Exception as e:
             logger.warning(f"[GoldenDataset] 读取上次运行结果失败: {e}")
 
-    # 保存本次结果
     try:
         _LAST_RUN_FILE.parent.mkdir(parents=True, exist_ok=True)
         with open(_LAST_RUN_FILE, "w", encoding="utf-8") as f:
@@ -335,10 +296,6 @@ def _detect_regression(report: GoldenRegressionReport) -> None:
     except Exception:
         pass
 
-
-# ===========================================================
-# 报告渲染
-# ===========================================================
 
 def format_compact_report(
     report: GoldenRegressionReport,
@@ -364,7 +321,6 @@ def format_compact_report(
         f"",
     ]
 
-    # 检索层简要分析
     retrieval_notes = []
     if report.avg_precision_at_5 >= 0.80 and report.hit_rate_at_5 >= 0.80:
         retrieval_notes.append("检索系统运行良好，精度和命中率均达标")
@@ -389,7 +345,6 @@ def format_compact_report(
         f"| Completeness | {report.avg_completeness:.3f} | ≥ 0.60 | 完整度：答案覆盖知识点各方面的程度 |",
     ]
 
-    # Citation Accuracy
     if report.avg_citation_precision is not None:
         lines.append(
             f"| Citation Accuracy | {report.avg_citation_precision:.3f} | ≥ 0.70 | 引用准确性：[n] 标注与参考资料的一致性 |"
@@ -399,14 +354,12 @@ def format_compact_report(
             f"| Citation Accuracy | N/A | ≥ 0.70 | 无显式引用标注，无法评估 |"
         )
 
-    # Hallucination Rate
     hallu_status = "低" if report.avg_hallucination_rate <= 0.15 else ("偏高" if report.avg_hallucination_rate > 0.30 else "中等")
     lines.append(
         f"| Hallucination Rate | {report.avg_hallucination_rate:.3f} | ≤ 0.15 | 幻觉率：无依据内容占比（{hallu_status}） |"
     )
     lines.append("")
 
-    # 生成层简要分析
     gen_notes = []
     if report.avg_hallucination_rate > 0.20:
         gen_notes.append(f"幻觉率偏高 ({report.avg_hallucination_rate:.1%})，LLM 生成了较多参考资料中不存在的内容")
@@ -418,7 +371,6 @@ def format_compact_report(
         lines.append("> " + "；".join(gen_notes))
         lines.append("")
 
-    # 回归告警
     if report.regression_detected:
         lines.append("## [WARNING] 回归告警")
         lines.append("")
@@ -426,7 +378,6 @@ def format_compact_report(
             lines.append(f"- {detail}")
         lines.append("")
 
-    # 未通过查询
     if report.failed > 0:
         lines.append("## 未通过查询")
         lines.append("")
@@ -442,7 +393,6 @@ def format_compact_report(
                 )
         lines.append("")
 
-    # 分析结论
     lines.append("## 分析结论")
     lines.append("")
     lines.append(f"**趋势**: {analysis.trend}")
@@ -460,10 +410,6 @@ def format_compact_report(
 
     return "\n".join(lines)
 
-
-# ===========================================================
-# 信息查询
-# ===========================================================
 
 def show_dataset_info(path: str | None = None) -> str:
     """显示黄金测试集概要信息。"""
@@ -493,10 +439,6 @@ def show_dataset_info(path: str | None = None) -> str:
     return "\n".join(lines)
 
 
-# ===========================================================
-# CLI
-# ===========================================================
-
 def main():
     parser = argparse.ArgumentParser(description="RAG 黄金测试集评估")
     parser.add_argument("--run", action="store_true", help="运行批量评估")
@@ -522,19 +464,16 @@ def main():
         print(f"Starting evaluation of {len(queries)} golden queries...")
         report = asyncio.run(run_golden_evaluation(queries, n_results=args.n_results))
 
-        # ---- 分析引擎（仅内存分析，不持久化到 DB）----
+        # 分析引擎（仅内存分析，不持久化到 DB）
         from backend.evaluation.analyzer import RAGAnalyzer
         analyzer = RAGAnalyzer()
         analysis = asyncio.run(analyzer.analyze_golden_report(report))
 
-        # 合成一份精简报告：关键数据 + 分析结论
         md = format_compact_report(report, analysis)
 
-        # 终端输出
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
         print(md)
 
-        # 写入一份精简文件
         out_dir = Path(__file__).parent.parent.parent / "logs"
         out_dir.mkdir(parents=True, exist_ok=True)
         ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")

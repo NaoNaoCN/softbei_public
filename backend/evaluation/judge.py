@@ -1,13 +1,4 @@
-"""
-backend/evaluation/judge.py
-LLM-as-Judge 评估器：用 LLM 评估 RAG 检索和生成质量。
-
-四类评估 Judge：
-1. Chunk Relevance  — 检索相关性评分 (0/1/2)
-2. Faithfulness     — 生成忠实度（逐句溯源）
-3. Completeness     — 知识点完整度（关键概念覆盖）
-4. Citation Accuracy— 引用准确性（[n] 标注验证）
-"""
+"""LLM-as-Judge 评估器：用 LLM 评估 RAG 检索和生成质量。"""
 
 from __future__ import annotations
 
@@ -23,10 +14,6 @@ from backend.agents.utils import safe_json_loads
 from backend.services.llm import chat_completion
 from backend.evaluation.metrics import precision_at_k
 
-
-# ===========================================================
-# Judge Prompt 模板
-# ===========================================================
 
 JUDGE_CHUNK_RELEVANCE_PROMPT = """你是一位 RAG 检索质量评估专家。
 给定一个用户查询和一条检索到的文本片段，判断该片段是否与查询相关。
@@ -115,10 +102,6 @@ AI 生成的答案中有 [N] 形式的引用标注。请检查引用处的内容
 {{"verdict": "accurate|inaccurate|vague", "explanation": "理由"}}"""
 
 
-# ===========================================================
-# RAGJudge 类
-# ===========================================================
-
 class RAGJudge:
     """RAG LLM-as-Judge 评估器。
 
@@ -147,10 +130,6 @@ class RAGJudge:
         self.provider = provider or config.llm.provider
         self.temperature = temperature
         self.sample_rate = sample_rate
-
-    # ----------------------------------------------------------
-    # Judge 1: Chunk Relevance
-    # ----------------------------------------------------------
 
     async def judge_chunk_relevance(
         self,
@@ -207,10 +186,6 @@ class RAGJudge:
         tasks = [_eval_one(c) for c in chunks]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         return [r if isinstance(r, int) else 0 for r in results]
-
-    # ----------------------------------------------------------
-    # Judge 2: Faithfulness
-    # ----------------------------------------------------------
 
     async def judge_faithfulness(
         self,
@@ -280,10 +255,6 @@ class RAGJudge:
             logger.warning(f"[RAGJudge] faithfulness 评估失败: {e}")
             return {"statements": [], "faithfulness": 0.0, "issues": [f"评估异常: {e}"]}
 
-    # ----------------------------------------------------------
-    # Judge 3: Completeness
-    # ----------------------------------------------------------
-
     async def _generate_expected_aspects(self, kp_name: str) -> list[str]:
         """用 LLM 动态生成知识点应包含的关键方面。"""
         prompt = JUDGE_COMPLETENESS_ASPECTS_PROMPT.format(kp_name=kp_name)
@@ -317,7 +288,6 @@ class RAGJudge:
         if not generated_content:
             return {"aspects": [], "completeness": 0.0}
 
-        # 若未提供 expected_aspects，自动生成
         if expected_aspects is None:
             expected_aspects = await self._generate_expected_aspects(kp_name)
 
@@ -350,10 +320,6 @@ class RAGJudge:
         except Exception as e:
             logger.warning(f"[RAGJudge] completeness 评估失败: {e}")
             return {"aspects": [], "completeness": 0.0}
-
-    # ----------------------------------------------------------
-    # Judge 4: Citation Accuracy
-    # ----------------------------------------------------------
 
     async def judge_citation_accuracy(
         self,
@@ -449,10 +415,6 @@ class RAGJudge:
         precision = accurate_count / len(citations) if citations else 1.0
         return {"citations": citations, "citation_precision": round(precision, 4)}
 
-    # ----------------------------------------------------------
-    # 联合评估
-    # ----------------------------------------------------------
-
     async def evaluate_full(
         self,
         query: str,
@@ -509,7 +471,6 @@ class RAGJudge:
                 generated_content, retrieved_chunks
             )
 
-        # 聚合结果
         faithfulness_score = faithfulness_result.get("faithfulness", 0.0)
         statements = faithfulness_result.get("statements", [])
         hallucination = (
@@ -547,26 +508,19 @@ class RAGJudge:
             "query": query,
             "kp_name": kp_name,
             "timestamp": None,  # 由外部设置
-            # Judge 1: 检索相关性
             "relevance_labels": relevance_labels,
             "precision_at_5": precision_at_k(relevance_labels, 5) if relevance_labels else 0.0,
-            # Judge 2: 忠实度
             "faithfulness_score": faithfulness_score,
             "hallucination_rate": hallucination,
             "faithfulness_statements": statements,
             "faithfulness_issues": faithfulness_result.get("issues", []),
-            # Judge 3: 完整度
             "completeness_score": completeness_result.get("completeness", 0.0),
             "completeness_aspects": completeness_result.get("aspects", []),
-            # Judge 4: 引用准确性
             "citation_precision": citation_result.get("citation_precision") if citation_result else None,
             "citations": citation_result.get("citations", []) if citation_result else [],
-            # 多 LLM 交叉验证
             "cross_validated": cross_validated,
             "cross_validation_disagreement": cross_validation_disagreement,
-            # SafetyAgent 审核结论（透传）
             "safety_issues": safety_issues or [],
-            # 元数据
             "experiment_group": experiment_group,
             "evaluation_time_ms": round(elapsed_ms, 1),
         }
@@ -583,7 +537,6 @@ class RAGJudge:
 
         logger.info(f"[RAGJudge] 评估完成: {', '.join(summary_parts)}")
 
-        # 如果幻觉率高，发出醒目告警
         if hallucination > 0.3:
             logger.warning(
                 f"[RAGJudge] 幻觉率偏高 ({hallucination:.1%})！"
@@ -596,10 +549,6 @@ class RAGJudge:
             )
 
         return result
-
-    # ----------------------------------------------------------
-    # 多 LLM 交叉验证
-    # ----------------------------------------------------------
 
     async def _cross_validate(
         self,

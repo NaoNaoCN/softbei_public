@@ -1,7 +1,4 @@
-"""
-backend/services/study_plan/resource_linker.py
-资源关联：为计划项匹配用户已生成的 ResourceMeta，并计算缺失的资源类型。
-"""
+"""资源关联：为计划项匹配用户已生成的 ResourceMeta，并计算缺失的资源类型。"""
 
 from __future__ import annotations
 

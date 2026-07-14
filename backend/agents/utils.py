@@ -1,7 +1,4 @@
-"""
-backend/agents/utils.py
-Agent 公共工具函数：RAG 检索 + Query Rewrite（策略A+B+C）。
-"""
+"""Agent 公共工具函数：RAG 检索 + Query Rewrite（策略A+B+C）。"""
 
 from __future__ import annotations
 
@@ -34,7 +31,6 @@ async def resolve_kp_name(state: AgentState, config_dict: dict | None = None) ->
         # 含中文/空格等，本身就是用户输入的名称
         return kp_id
 
-    # 尝试从 DB 查名称
     db = None
     if config_dict and "configurable" in config_dict:
         db = config_dict["configurable"].get("db")
@@ -88,13 +84,12 @@ def safe_json_loads(raw: str) -> dict | list:
     original = raw
     cleaned = parse_json_llm_response(raw)
 
-    # 策略 1：直接解析
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError:
         pass
 
-    # 策略 2：修复非法反斜杠转义（LLM 经常在 JSON 字符串中输出 LaTeX 命令）
+    # 修复非法反斜杠转义（LLM 经常在 JSON 字符串中输出 LaTeX 命令）
     # 保留合法的 JSON 转义序列：\" \\ \/ \b \f \n \r \t \uXXXX
     fixed = re.sub(
         r'\\(?!["\\\/bfnrtu])(?![0-9A-Fa-f]{4})',
@@ -112,14 +107,13 @@ def safe_json_loads(raw: str) -> dict | list:
     if multi is not None:
         return multi
 
-    # 策略 4：从文本中提取 JSON 块（处理 LLM 在 JSON 前后加解释文字的情况）
+    # 从文本中提取 JSON 块（处理 LLM 在 JSON 前后加解释文字的情况）
     extracted = _extract_json_block(cleaned)
     if extracted:
         try:
             return json.loads(extracted)
         except json.JSONDecodeError:
             pass
-        # 对提取的块也尝试修复反斜杠
         fixed_extracted = re.sub(
             r'\\(?!["\\\/bfnrtu])(?![0-9A-Fa-f]{4})',
             r'\\\\',
@@ -130,14 +124,13 @@ def safe_json_loads(raw: str) -> dict | list:
         except json.JSONDecodeError:
             pass
 
-    # 策略 5：修复被截断的 JSON（补全未闭合的括号和引号）
+    # 修复被截断的 JSON（补全未闭合的括号和引号）
     repaired = _repair_truncated_json(cleaned)
     if repaired != cleaned:
         try:
             return json.loads(repaired)
         except json.JSONDecodeError:
             pass
-        # 修复后也尝试反斜杠修复
         fixed_repaired = re.sub(
             r'\\(?!["\\\/bfnrtu])(?![0-9A-Fa-f]{4})',
             r'\\\\',
@@ -148,14 +141,13 @@ def safe_json_loads(raw: str) -> dict | list:
         except json.JSONDecodeError:
             pass
 
-    # 策略 6：尝试用 ast.literal_eval（对 Python 风格的 dict/list 字面量有效）
+    # 尝试用 ast.literal_eval（对 Python 风格的 dict/list 字面量有效）
     try:
         import ast
         return ast.literal_eval(cleaned)
     except (ValueError, SyntaxError):
         pass
 
-    # 所有策略都失败，记录原始输出方便排查
     from loguru import logger
     logger.warning(
         f"[safe_json_loads] 所有解析策略均失败，原始输出前 300 字符: {original[:300]!r}"
@@ -193,14 +185,12 @@ def _decode_concatenated_objects(text: str) -> list | None:
     return items if len(items) >= 2 else None
 
 
-
+def _repair_truncated_json(text: str) -> str:
     """尝试修复被 max_tokens 截断的 JSON。
 
     策略：统计未闭合的括号，在末尾补上缺失的闭合符号。
     同时处理被截断的字符串（未闭合的双引号）。
     """
-    # 去除末尾可能被截断的不完整片段（如被截断的字符串值）
-    # 找到最后一个完整的结构边界
     stripped = text.rstrip()
 
     # 如果末尾是未闭合的字符串（奇数个未转义的双引号），尝试截断到上一个完整的值
@@ -210,7 +200,6 @@ def _decode_concatenated_objects(text: str) -> list | None:
         if last_complete > 0:
             stripped = stripped[:last_complete]
 
-    # 统计未闭合的括号
     depth_brace = 0      # {}
     depth_bracket = 0    # []
     in_string = False
@@ -227,8 +216,7 @@ def _decode_concatenated_objects(text: str) -> list | None:
             elif ch == ']':
                 depth_bracket -= 1
 
-    # 补全缺失的闭合括号
-    result = stripped.rstrip(',\n\r\t ')  # 去掉尾部逗号（数组最后一项可能被截断）
+    result = stripped.rstrip(',\n\r\t ')
     result += ']' * max(0, depth_bracket)
     result += '}' * max(0, depth_brace)
 
@@ -295,10 +283,6 @@ def _extract_json_block(text: str) -> str | None:
     return None
 
 
-# ----------------------------------------------------------
-# 请求级缓存
-# ----------------------------------------------------------
-
 # RAG 检索缓存：同一请求内多个 Agent 检索相同知识点时复用结果
 # value: (context, retrieved_texts, sources)
 _retrieval_cache: dict[tuple[str, str], tuple[str, list[str], list]] = {}
@@ -312,10 +296,6 @@ def clear_retrieval_cache() -> None:
 # Query Rewrite 改写结果缓存
 _rewrite_cache: dict[tuple[str, str], str] = {}
 
-
-# ----------------------------------------------------------
-# Query Rewrite：策略 A（对话去上下文）+ 策略 B（画像感知）
-# ----------------------------------------------------------
 
 _REWRITE_PROMPT = _prompts.get("rag.rewrite")
 
@@ -336,7 +316,7 @@ async def _rewrite_query(
     # 对话去上下文化（策略 A）
     decontext_section = ""
     if cfg.query_rewrite_decontextualize and chat_history:
-        recent = chat_history[-6:]  # 最近 6 轮
+        recent = chat_history[-6:]
         formatted = "\n".join(
             f"- {m['role']}: {m['content'][:120]}" for m in recent
         )
@@ -392,10 +372,6 @@ def _build_fallback_query(user_message: str, kp_name: str) -> str:
     return f"{kp_name}：{user_message[:120]}"
 
 
-# ----------------------------------------------------------
-# 策略 C：多角度查询扩展
-# ----------------------------------------------------------
-
 _EXPAND_PROMPT = _prompts.get("rag.expand")
 
 
@@ -427,10 +403,6 @@ async def _expand_queries(query: str, n: int = 3) -> list[str]:
     return [query]
 
 
-# ----------------------------------------------------------
-# RRF 融合（Reciprocal Rank Fusion）
-# ----------------------------------------------------------
-
 def _rrf_fusion(
     query_results: list[list],
     k: int = 60,
@@ -460,14 +432,9 @@ def _rrf_fusion(
             else:
                 fused[chunk.chunk_id] = (chunk, rrf_score)
 
-    # 按 RRF 分降序排列
     sorted_results = sorted(fused.values(), key=lambda x: x[1], reverse=True)
     return [chunk for chunk, _ in sorted_results]
 
-
-# ----------------------------------------------------------
-# 核心检索接口（含 Query Rewrite）
-# ----------------------------------------------------------
 
 async def retrieve_context(
     state: AgentState,
@@ -503,7 +470,6 @@ async def retrieve_context(
     user_id = str(state.user_id)
     cache_key = (kp_name, user_id)
 
-    # 优先命中缓存
     if cache_key in _retrieval_cache:
         logger.info("[%s] RAG 命中缓存，跳过检索" % agent_label)
         cached = _retrieval_cache[cache_key]
@@ -515,9 +481,7 @@ async def retrieve_context(
     # 用于评估采集的查询记录（默认为 kp_name 固定模板，Query Rewrite 启用后覆盖）
     rewritten_query = f"知识点：{kp_name}；定义：{kp_name}；{kp_name}的核心概念与原理"
 
-    # ---- Query Rewrite 主逻辑 ----
     if cfg.query_rewrite_enabled:
-        # 策略 A+B：改写查询
         rewrite_cache_key = (state.user_message, kp_name)
         if rewrite_cache_key in _rewrite_cache:
             rewritten_query = _rewrite_cache[rewrite_cache_key]
@@ -531,7 +495,6 @@ async def retrieve_context(
             )
             _rewrite_cache[rewrite_cache_key] = rewritten_query
 
-        # 策略 C：多角度扩展（可选）
         if cfg.query_rewrite_multi_query:
             sub_queries = await _expand_queries(
                 rewritten_query,
@@ -572,9 +535,7 @@ async def retrieve_context(
                 n_results=cfg.n_results,
                 user_id=user_id,
             )
-    # ------------------------------------------
 
-    # 格式化上下文
     context, sources = format_context_with_sources(chunks, max_tokens=cfg.context_max_tokens)
     retrieved_texts = [c.text for c in chunks]
 

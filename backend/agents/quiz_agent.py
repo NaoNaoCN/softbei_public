@@ -1,7 +1,4 @@
-"""
-backend/agents/quiz_agent.py
-QuizAgent：生成多题型测验题目集合。
-"""
+"""QuizAgent：生成多题型测验题目集合。"""
 
 from __future__ import annotations
 
@@ -21,10 +18,9 @@ SYSTEM_PROMPT = _prompts.get("agents.quiz.system_prompt")
 
 
 def _get_question_counts(profile) -> tuple[int, int, int]:
-    """根据画像决定题目数量分布。"""
+    """根据画像薄弱知识点数量决定题目数量分布。"""
     if not profile:
         return tuple(app_config.generation.quiz.counts_default)
-    # 根据薄弱知识点数量决定题目量
     weak_count = len(getattr(profile, "knowledge_weak", []) or [])
     if weak_count > app_config.generation.quiz.weak_threshold_high:
         return tuple(app_config.generation.quiz.counts_high)
@@ -34,18 +30,10 @@ def _get_question_counts(profile) -> tuple[int, int, int]:
 
 
 async def run(state: AgentState, config: RunnableConfig = None) -> AgentState:
-    """
-    QuizAgent 节点入口。
-
-    职责：
-    1. 检索知识点相关文档
-    2. 调用 LLM 生成题目 JSON 数组
-    3. 将题目列表序列化后存入 draft_content
-    """
+    """QuizAgent 节点入口：检索知识点文档并调用 LLM 生成题目 JSON 数组。"""
     kp_name = await resolve_kp_name(state, config)
 
-    # 决定题目数量分布
-    # 优先使用 state.question_type_counts（用户指定），否则使用 state.num_questions 按比例分配
+    # 优先使用 state.question_type_counts（用户指定），否则按 state.num_questions 比例分配
     if state.question_type_counts:
         counts = state.question_type_counts
         single = counts.get("single", 0)
@@ -67,13 +55,10 @@ async def run(state: AgentState, config: RunnableConfig = None) -> AgentState:
     logger.info("[QuizAgent] kp_name=%s total=%d single=%d multi=%d fill=%d"% (
                  kp_name, total, single, multi, fill))
 
-    # 检索相关文档
     context, retrieved_texts = await retrieve_context(state, "QuizAgent", config)
 
-    # 更新 retrieved_docs
     state = state.model_copy(update={"retrieved_docs": retrieved_texts})
 
-    # 构造 prompt
     prompt = SYSTEM_PROMPT.format(
         count=total,
         single_count=single,
@@ -90,7 +75,7 @@ async def run(state: AgentState, config: RunnableConfig = None) -> AgentState:
             max_tokens=app_config.agents.quiz.max_tokens,
         )
 
-        # 解析 JSON（safe_json_loads 容错：代码块/LaTeX/截断/并排对象）
+        # safe_json_loads 容错：代码块/LaTeX/截断/并排对象
         questions = safe_json_loads(raw)
         if isinstance(questions, dict):
             # LLM 偶尔只返回单个题目对象，包成数组

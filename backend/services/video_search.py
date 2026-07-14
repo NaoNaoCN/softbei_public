@@ -1,8 +1,4 @@
-"""
-backend/services/video_search.py
-视频搜索服务：Bilibili 为主源，Tavily 为备选。
-提供 Perplexity 风格的 [v1][v2] 穿插式引用注入。
-"""
+"""视频搜索服务：Bilibili 为主源，Tavily 为备选。"""
 
 from __future__ import annotations
 
@@ -35,7 +31,6 @@ def extract_search_keywords(text: str) -> str:
 
     # 确保自定义词典只加载一次
     if not getattr(extract_search_keywords, "_dict_loaded", False):
-        # 添加深度学习/计算机领域常见术语
         domain_terms = [
             "激活函数", "损失函数", "目标函数", "代价函数",
             "快速排序", "归并排序", "冒泡排序", "堆排序", "插入排序",
@@ -52,7 +47,6 @@ def extract_search_keywords(text: str) -> str:
 
     # 不限制词性，纯靠 TF-IDF 权重筛选关键词
     keywords = jieba.analyse.extract_tags(text, topK=4)
-    # 过滤单字和常见无意义词
     stopwords = {"什么", "怎么", "样子", "部分", "介绍", "讲解", "一下", "一份",
                  "帮我", "生成", "学习", "文档", "资料", "关于", "区别", "对比"}
     keywords = [w for w in keywords if len(w) >= 2 and w not in stopwords]
@@ -160,7 +154,6 @@ async def search_videos(query: str, skip_extraction: bool = False) -> list[Video
     keywords = query if skip_extraction else extract_search_keywords(query)
     logger.info(f"[VideoSearch] 原始查询: {query[:50]}... → 关键词: {keywords}")
 
-    # 尝试 Bilibili
     try:
         results = await search_bilibili(keywords, limit=config.video_search.max_results)
         if results:
@@ -212,7 +205,6 @@ def inject_video_citations(content: str, videos: list[VideoResult]) -> str:
 
     content = "\n".join(lines)
 
-    # 追加视频参考区
     refs = "\n\n---\n\n**视频参考**\n\n"
     for i, v in enumerate(videos):
         refs += f"**[v{i+1}]** [{v.title}]({v.url})"

@@ -1,7 +1,4 @@
-"""
-backend/auth/deps.py
-FastAPI 依赖：从 JWT token 提取当前用户 ID，过渡期兼容 query param 回退。
-"""
+"""FastAPI 依赖：从 JWT token 提取当前用户 ID，过渡期兼容 query param 回退。"""
 
 from __future__ import annotations
 

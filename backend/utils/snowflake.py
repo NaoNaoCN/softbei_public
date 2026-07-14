@@ -1,7 +1,4 @@
-"""
-backend/utils/snowflake.py
-Snowflake ID 生成器，用于生成全局唯一的 BIGINT 主键。
-"""
+"""Snowflake ID 生成器，用于生成全局唯一的 BIGINT 主键。"""
 from __future__ import annotations
 
 import hashlib

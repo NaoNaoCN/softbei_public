@@ -1,8 +1,3 @@
-"""
-backend/agents/mindmap_agent.py
-MindmapAgent：生成思维导图数据（ECharts tree 格式 JSON）。
-"""
-
 from __future__ import annotations
 
 import json
@@ -21,24 +16,14 @@ SYSTEM_PROMPT = _prompts.get("agents.mindmap.system_prompt")
 
 
 async def run(state: AgentState, config: RunnableConfig = None) -> AgentState:
-    """
-    MindmapAgent 节点入口。
-
-    职责：
-    1. 检索相关文档
-    2. 调用 LLM 生成 ECharts tree JSON
-    3. 将 JSON 字符串存入 draft_content
-    """
+    """MindmapAgent 节点入口。"""
     kp_name = await resolve_kp_name(state, config)
     logger.info("[MindmapAgent] kp_name=%s", kp_name)
 
-    # 检索相关文档
     context, retrieved_texts = await retrieve_context(state, "MindmapAgent", config)
 
-    # 更新 retrieved_docs
     state = state.model_copy(update={"retrieved_docs": retrieved_texts})
 
-    # 构造 prompt
     prompt = SYSTEM_PROMPT.format(
         context=context, kp_name=kp_name,
         max_depth=app_config.generation.mindmap_max_depth,
@@ -52,7 +37,6 @@ async def run(state: AgentState, config: RunnableConfig = None) -> AgentState:
             max_tokens=app_config.agents.mindmap.max_tokens,
         )
 
-        # 验证 JSON 合法性
         try:
             json.loads(raw)
         except json.JSONDecodeError:

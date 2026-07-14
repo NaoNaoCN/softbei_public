@@ -1,8 +1,3 @@
-"""
-backend/agents/summary_agent.py
-SummaryAgent：生成知识点精简总结（适合复习的要点提炼）。
-"""
-
 from __future__ import annotations
 
 from loguru import logger
@@ -19,14 +14,7 @@ SYSTEM_PROMPT = _prompts.get("agents.summary.system_prompt")
 
 
 async def run(state: AgentState, config: RunnableConfig = None) -> AgentState:
-    """
-    SummaryAgent 节点入口。
-
-    职责：
-    1. 检索相关文档
-    2. 调用 LLM 生成复习总结 Markdown
-    3. 写入 state.draft_content
-    """
+    """SummaryAgent 节点入口。"""
     kp_name = await resolve_kp_name(state, config)
     logger.info("[SummaryAgent] kp_name=%s", kp_name)
 
@@ -35,10 +23,8 @@ async def run(state: AgentState, config: RunnableConfig = None) -> AgentState:
         state, "SummaryAgent", config, return_sources=True
     )
 
-    # 更新 retrieved_docs
     state = state.model_copy(update={"retrieved_docs": retrieved_texts})
 
-    # 构造 prompt
     prompt = SYSTEM_PROMPT.format(context=context, kp_name=kp_name)
 
     try:

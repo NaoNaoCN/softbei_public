@@ -1,7 +1,4 @@
-"""
-backend/evaluation/models.py
-评估数据模型：检索快照、生成快照、评估报告。
-"""
+"""评估数据模型：检索快照、生成快照、评估报告。"""
 
 from __future__ import annotations
 

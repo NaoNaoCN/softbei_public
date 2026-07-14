@@ -1,11 +1,4 @@
-"""
-backend/evaluation/collector.py
-RAG 评估数据采集器：在 RAG 管线中匿名埋点，采集检索和生成的元数据。
-
-开发阶段（evaluation.mode=development）：默认 100% LLM Judge 采样。
-生产阶段（evaluation.mode=production）：默认 10% LLM Judge 采样。
-采样率通过 config.evaluation.sampling 配置。
-"""
+"""RAG 评估数据采集器：在 RAG 管线中匿名埋点，采集检索和生成的元数据。"""
 
 from __future__ import annotations
 
@@ -57,10 +50,6 @@ class RAGEvalCollector:
         self._records: list[GenerationEvalRecord] = []
         self._experiment_group: Optional[str] = None
 
-    # ----------------------------------------------------------
-    # 采样率（从 config 动态读取）
-    # ----------------------------------------------------------
-
     @property
     def sample_rate(self) -> float:
         """从 config 读取当前模式的采样率。"""
@@ -68,10 +57,6 @@ class RAGEvalCollector:
         if mode == "development":
             return config.evaluation.sampling.development
         return config.evaluation.sampling.production
-
-    # ----------------------------------------------------------
-    # 查询生命周期
-    # ----------------------------------------------------------
 
     def start_query(
         self,
@@ -172,10 +157,6 @@ class RAGEvalCollector:
         self._experiment_group = None
         return record
 
-    # ----------------------------------------------------------
-    # 采样决策
-    # ----------------------------------------------------------
-
     def decide_sample(self, session_id: str = "") -> bool:
         """
         按 session_id 哈希决定是否对本次请求执行 LLM-as-Judge 评估。
@@ -195,10 +176,6 @@ class RAGEvalCollector:
 
         seed = hash(session_id) % 100
         return (seed / 100.0) < rate
-
-    # ----------------------------------------------------------
-    # 健康检查
-    # ----------------------------------------------------------
 
     def _record_health_check(self, record: GenerationEvalRecord) -> None:
         """将 flush 的记录同步写入健康检查器。"""
@@ -221,10 +198,6 @@ class RAGEvalCollector:
             )
         except Exception:
             pass  # 健康检查异常不影响主流程
-
-    # ----------------------------------------------------------
-    # 记录查询
-    # ----------------------------------------------------------
 
     def get_recent_records(self, n: int = 20) -> list[GenerationEvalRecord]:
         """获取最近 N 条采集记录。"""

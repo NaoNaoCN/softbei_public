@@ -1,7 +1,4 @@
-"""
-backend/rag/retriever.py
-RAG 检索器：给定用户问题，返回相关文本块及其来源引用。
-"""
+"""RAG 检索器：给定用户问题，返回相关文本块及其来源引用。"""
 
 from __future__ import annotations
 
@@ -13,9 +10,7 @@ from loguru import logger
 from backend.db.vector import query_documents, query_keyword
 from backend.services.llm import get_embedding
 
-# ----------------------------------------------------------
 # 数据结构
-# ----------------------------------------------------------
 
 @dataclass
 class RetrievedChunk:
@@ -43,9 +38,7 @@ class CitationSource:
     section: Optional[str] = None
 
 
-# ----------------------------------------------------------
 # 公开接口
-# ----------------------------------------------------------
 
 async def retrieve(
     query: str,
@@ -168,15 +161,12 @@ async def retrieve_with_queries(
             logger.warning(f"[RAG] 子查询检索失败: {query[:40]!r}: {e}")
             return []
 
-    # 并发执行所有子查询的检索
     tasks = [_fetch_one(q) for q in queries]
     results = await asyncio.gather(*tasks)
     return list(results)
 
 
-# ----------------------------------------------------------
 # 路径 A：关键词召回（jieba 分词 + PostgreSQL ILIKE）
-# ----------------------------------------------------------
 
 # jieba 通用停用词表
 _KEYWORD_STOP_WORDS: set[str] = {
@@ -265,9 +255,7 @@ async def retrieve_keyword(
     return chunks
 
 
-# ----------------------------------------------------------
 # 混合检索（多路召回 + RRF 融合）
-# ----------------------------------------------------------
 
 def _rrf_fusion_cross_path(
     path_results: dict[str, list[RetrievedChunk]],
@@ -376,18 +364,15 @@ async def retrieve_hybrid(
             logger.warning(f"[RAG] 关键词召回路异常: {e}")
             return ("keyword", [])
 
-    # 并行执行各路召回
     tasks = [_vector_path(), _keyword_path()]
     path_results: dict[str, list[RetrievedChunk]] = {}
     results = await asyncio.gather(*tasks)
     for path_name, chunks in results:
         path_results[path_name] = chunks
 
-    # 统计各路召回数量
     counts = ", ".join(f"{k}={len(v)}" for k, v in path_results.items())
     logger.info(f"[RAG] 混合检索各路召回: {counts}")
 
-    # RRF 跨路融合
     merged = _rrf_fusion_cross_path(
         path_results,
         k=hybrid_cfg.rrf_k,
@@ -397,7 +382,6 @@ async def retrieve_hybrid(
         },
     )
 
-    # Re-rank + 父块回填 + 截断
     if merged:
         merged = _rerank_by_keyword_overlap(query, merged)
         merged = await _resolve_parent_chunks(merged)
@@ -413,9 +397,7 @@ async def retrieve_hybrid(
     return merged
 
 
-# ----------------------------------------------------------
 # 上下文格式化
-# ----------------------------------------------------------
 
 
 def format_context(chunks: list[RetrievedChunk], max_tokens: int | None = None) -> str:
@@ -457,7 +439,6 @@ def format_context_with_sources(
         logger.warning("[RAG] format_context 收到空 chunks，LLM 将在无参考资料的情况下生成内容。")
         return "（暂无参考资料）", []
 
-    # ---- 多样感知排序 ----
     # 按分数排序后，重新排列：优先保留不同 section 的 chunk
     # 避免 top-k 的 5 条全来自同一节的"定义"部分
     diverse_chunks = _diversify_order(chunks)
@@ -505,7 +486,6 @@ def format_context_with_sources(
 
     result = "\n\n".join(parts)
 
-    # ---- Citation 编号安全 ----
     # 如果截断了 chunk，在末尾显式告知 LLM 实际展示范围
     total = len(diverse_chunks)
     if shown_count < total:
@@ -558,15 +538,12 @@ def _diversify_order(chunks: list[RetrievedChunk]) -> list[RetrievedChunk]:
         if not added:
             break
 
-    # 追加未归组的 chunk
     result.extend(no_section)
 
     return result
 
 
-# ----------------------------------------------------------
 # 内部辅助
-# ----------------------------------------------------------
 
 def _estimate_tokens(text: str) -> int:
     """按语言比例估算 token 数。"""
@@ -593,7 +570,6 @@ async def _resolve_parent_chunks(
     :param chunks: re-rank 后的子块列表（已按分数降序）
     :return:       父块回填 + 去重后的列表
     """
-    # 收集需要查询的 parent_chunk_id（去重）
     parent_ids: list[str] = []
     child_to_parent: dict[str, str] = {}  # child_chunk_id → parent_chunk_id
     seen_parents: set[str] = set()
@@ -606,11 +582,9 @@ async def _resolve_parent_chunks(
     if not child_to_parent:
         return chunks  # 无父子关系，直接返回
 
-    # 批量查询父块文本
     parent_ids = list(set(child_to_parent.values()))
     parent_texts = await _get_parent_texts_batch(parent_ids)
 
-    # 去重 + 回填
     resolved: list[RetrievedChunk] = []
     for c in chunks:
         pid = child_to_parent.get(c.chunk_id, "")
@@ -640,13 +614,11 @@ async def _resolve_parent_chunks(
         # 无父块或父块未找到 → 保留原始子块
         resolved.append(c)
 
-    # 按分数降序
     resolved.sort(key=lambda c: c.score, reverse=True)
     return resolved
 
 
 async def _get_parent_texts_batch(parent_ids: list[str]) -> dict[str, str]:
-    """批量查询父块文本。"""
     try:
         from backend.db.vector import get_parent_texts
         return await get_parent_texts(parent_ids)
@@ -665,7 +637,6 @@ def _rerank_by_keyword_overlap(query: str, chunks: list[RetrievedChunk]) -> list
     """
     from backend.config import config
 
-    # 使用 jieba 分词提取关键词（与关键词召回路共用分词逻辑）
     keywords = _tokenize_keywords(query)
 
     if not keywords:

@@ -1,7 +1,4 @@
-"""
-backend/agents/code_agent.py
-CodeAgent：生成代码示例或编程练习题（含参考答案）。
-"""
+"""CodeAgent：生成代码示例或编程练习题（含参考答案）。"""
 
 from __future__ import annotations
 
@@ -20,23 +17,13 @@ SYSTEM_PROMPT = _prompts.get("agents.code.system_prompt")
 
 
 async def run(state: AgentState, config: RunnableConfig = None) -> AgentState:
-    """
-    CodeAgent 节点入口。
-
-    职责：
-    1. 检索相关文档和代码示例
-    2. 调用 LLM 生成代码内容
-    3. 写入 state.draft_content
-    """
+    """CodeAgent 节点入口：检索相关文档并调用 LLM 生成代码内容。"""
     kp_name = await resolve_kp_name(state, config)
 
-    # 检索相关文档
     context, retrieved_texts = await retrieve_context(state, "CodeAgent", config)
 
-    # 更新 retrieved_docs
     state = state.model_copy(update={"retrieved_docs": retrieved_texts})
 
-    # 构建画像上下文
     profile_summary = ""
     if state.profile:
         try:
@@ -46,7 +33,6 @@ async def run(state: AgentState, config: RunnableConfig = None) -> AgentState:
     else:
         profile_summary = "（暂无画像信息）"
 
-    # 构造 prompt
     prompt = SYSTEM_PROMPT.format(
         context=context,
         kp_name=kp_name,

@@ -1,7 +1,4 @@
-"""
-backend/agents/profile_agent.py
-ProfileAgent：从对话中提取并更新学生画像，判断字段完整性，决定是否放行到 planner。
-"""
+"""ProfileAgent：从对话中提取并更新学生画像，判断字段完整性，决定是否放行到 planner。"""
 
 from __future__ import annotations
 
@@ -41,7 +38,6 @@ async def _check_user_has_documents(user_id: int) -> bool:
     try:
         from backend.db.vector import get_collection
         col = get_collection()
-        # 查询该用户是否有任何文档（只需 1 条即可判断）
         results = await col.get(where={"user_id": str(user_id)}, limit=1)
         return bool(results and results.get("ids"))
     except Exception:
@@ -84,19 +80,11 @@ def _check_profile_complete(state: AgentState) -> bool:
 
 
 async def run(state: AgentState, config: RunnableConfig) -> AgentState:
-    """
-    ProfileAgent 节点入口。
-
-    1. 调用 LLM 从 user_message 提取画像字段，增量合并到 DB
-    2. 判断消息意图（纯介绍 vs 资源请求）
-    3. 判断画像完整性，写入 profile_complete 和 clarify_message
-    """
-    # 从 config 中获取 db（LangGraph 通过 config 传递上下文）
+    """ProfileAgent 节点入口。"""
     db = None
     if config and "configurable" in config:
         db = config["configurable"].get("db")
 
-    # -- 1. 提取画像字段 --
     extract_messages = [
         {"role": "system", "content": _EXTRACT_PROMPT},
     ]
@@ -115,7 +103,6 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
         logger.error(f"画像提取失败: {e}, raw={raw if 'raw' in dir() else 'N/A'}")
         updates = {}
 
-    # -- 2. 合并到数据库 --
     user_id_int = state.user_id
     logger.info(f"[ProfileAgent] db={db}, config_keys={list(config.keys()) if config else 'None'}")
     if db is not None:
@@ -129,7 +116,6 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
         # 无 db 时使用内存合并
         state = _merge_profile_in_memory(state, updates)
 
-    # -- 3. 判断消息意图 --
     intent_messages = [
         {"role": "system", "content": _INTENT_PROMPT},
     ]
@@ -142,7 +128,6 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
     except Exception:
         is_resource_request = False
 
-    # -- 4. 判断画像完整性 --
     complete = _check_profile_complete(state)
     state = state.model_copy(update={"profile_complete": complete})
 
@@ -150,14 +135,12 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
     logger.info(f"[ProfileAgent] profile={state.profile}")
     logger.info(f"[ProfileAgent] complete={complete}, is_resource_request={is_resource_request}")
 
-    # -- 5. 画像完整且有资源请求意图时，检查用户是否有已上传文档 --
     has_user_docs = False
     if complete and is_resource_request:
         has_user_docs = await _check_user_has_documents(state.user_id)
         # 仅在首次对话（无历史）时引导上传，后续用户坚持请求则放行
         is_first_conversation = len(state.chat_history) == 0
         if not has_user_docs and is_first_conversation:
-            # 用户没有上传过教材，确认画像并引导上传
             logger.info(f"[ProfileAgent] 画像完整但用户无已上传文档，引导上传教材")
             known = _profile_to_known_fields(state.profile)
             guide_prompt = _NO_DOCS_GUIDE_PROMPT.format(
@@ -181,12 +164,10 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
             })
             return state
 
-    # -- 5b. 画像完整但无资源请求 --
     # 有对话历史 = 追问/澄清场景，放行到 planner（由 planner 路由到 clarify_agent）
     # 无对话历史 = 首次自我介绍，确认画像不触发生成
     if complete and not is_resource_request:
         if state.chat_history:
-            # 追问场景：放行到 planner_agent
             state = state.model_copy(update={"profile_complete": True})
             return state
         has_user_docs_for_confirm = await _check_user_has_documents(state.user_id)
@@ -224,7 +205,6 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
         })
         return state
 
-    # -- 6. 若需要追问，生成 clarify_message --
     if not complete or (is_resource_request and not complete):
         known = _profile_to_known_fields(state.profile)
         missing = []
@@ -236,7 +216,6 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
             missing.append("学习偏好（图文/代码/文字）")
 
         if is_resource_request:
-            # 提取用户想学的主题
             topic = state.user_message[:50]
             clarify_prompt = _RESOURCE_CLARIFY_PROMPT.format(
                 topic=topic,

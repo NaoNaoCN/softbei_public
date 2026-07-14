@@ -1,7 +1,4 @@
-"""
-backend/agents/recommend_agent.py
-RecommendAgent：基于学生画像和学习历史推荐下一步学习知识点。
-"""
+"""RecommendAgent：基于学生画像和学习历史推荐下一步学习知识点。"""
 
 from __future__ import annotations
 
@@ -31,12 +28,10 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
     2. 结合画像调用 LLM 选出最优推荐
     3. 将推荐列表存入 state.metadata["recommendations"]
     """
-    # 从 config 获取 db
     db = None
     if config and "configurable" in config:
         db = config["configurable"].get("db")
 
-    # 构建画像上下文
     if state.profile:
         try:
             profile_text = await profile_svc.build_profile_context(state.profile)
@@ -45,7 +40,6 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
     else:
         profile_text = "（暂无画像信息）"
 
-    # 获取已掌握和薄弱知识点
     mastered = []
     weak = []
     goal = ""
@@ -78,7 +72,6 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
     kp_list = "\n".join(available_kps) if available_kps else "（无可用知识点）"
     logger.info("[RecommendAgent] 开始推荐，available_kps=%d goal=%s" % (len(available_kps), goal or "未设定"))
 
-    # 构造 prompt
     prompt = SYSTEM_PROMPT.format(
         profile=profile_text,
         mastered=", ".join(mastered) if mastered else "无",
@@ -93,12 +86,10 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
             temperature=app_config.agents.recommend.temperature,
             max_tokens=app_config.agents.recommend.max_tokens,
         )
-        # 去除 LLM 可能返回的 markdown 代码块包裹
         cleaned = parse_json_llm_response(raw)
         recommendations = json.loads(cleaned)
         logger.info(f"[RecommendAgent] 推荐生成成功，共 {len(recommendations) if isinstance(recommendations, list) else 0} 条")
 
-        # 确保是列表
         if not isinstance(recommendations, list):
             recommendations = []
 
@@ -109,12 +100,10 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
                 logger.warning(f"[RecommendAgent] 过滤掉 {len(recommendations) - len(valid_recs)} 条无效推荐（kp_id 不存在于知识图谱）")
             recommendations = valid_recs
 
-        # 更新 state
         new_metadata = dict(state.metadata) if state.metadata else {}
         new_metadata["recommendations"] = recommendations
         new_metadata["kp_name"] = state.kp_id or ""  # 供前端构造路径名
 
-        # 生成人类可读的推荐文本
         lines = []
         for i, rec in enumerate(recommendations, 1):
             name = rec.get("kp_name", "未知知识点")
@@ -127,7 +116,6 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
 
         # 只在没有已生成内容时才写入 final_content
         if state.final_content:
-            # 已有资源内容，推荐追加到末尾
             state = state.model_copy(update={
                 "metadata": new_metadata,
                 # "final_content": state.final_content + "\n\n---\n\n**推荐下一步学习：**\n" + readable,

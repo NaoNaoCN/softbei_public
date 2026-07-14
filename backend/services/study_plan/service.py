@@ -1,7 +1,4 @@
-"""
-backend/services/study_plan/service.py
-学习计划编排与 CRUD：collector → sequencer → scheduler → resource_linker → 持久化。
-"""
+"""学习计划编排与 CRUD：collector → sequencer → scheduler → resource_linker → 持久化。"""
 
 from __future__ import annotations
 
@@ -44,29 +41,20 @@ from backend.services.study_plan.scheduler import schedule_items
 from backend.services.study_plan.sequencer import sequence_candidates
 
 
-# ----------------------------------------------------------
-# 生成
-# ----------------------------------------------------------
-
 async def generate_study_plan(
     user_id: int,
     req: StudyPlanGenerateRequest,
     db: AsyncSession,
 ) -> Optional[StudyPlanOut]:
     """
-    生成一份学习计划：
-      1. collector  收集候选知识点（路径汇总 + 画像补全）
-      2. sequencer  LLM 排序 + 时长预估（失败回退）
-      3. scheduler  确定性日历装箱
-      4. linker     匹配已有资源 + 计算缺失类型
-      5. 持久化     StudyPlan + StudyPlanItem
+    生成一份学习计划：collector 收集候选 → sequencer LLM 排序 + 时长预估 →
+    scheduler 确定性装箱 → linker 匹配已有资源 → 持久化 StudyPlan + StudyPlanItem。
 
     候选为空时返回 None（调用方据此提示用户先建立学习路径/画像）。
     """
     sp_cfg = config.study_plan
     profile = await profile_svc.get_profile(user_id, db)
 
-    # 1. 候选知识点
     candidates = await collect_candidates(
         user_id, db, profile, source=req.source, path_ids=req.path_ids,
     )
@@ -74,7 +62,6 @@ async def generate_study_plan(
         logger.info("[StudyPlan] user={} 无候选知识点，跳过生成", user_id)
         return None
 
-    # 2. LLM 排序
     profile_text = ""
     if profile is not None:
         try:
@@ -85,7 +72,6 @@ async def generate_study_plan(
     if not sequenced:
         return None
 
-    # 3. 确定性排程
     daily = (
         req.daily_time_minutes
         or (profile.daily_time_minutes if profile else None)
@@ -100,11 +86,9 @@ async def generate_study_plan(
         days=req.days,
     )
 
-    # 4. 资源关联
     kp_ids = [it.kp_id for it in schedule.items]
     links = await link_resources(user_id, kp_ids, db, target_types=sp_cfg.target_resource_types)
 
-    # 5. 持久化
     source_path_ids = req.path_ids if req.source == "path" else await _user_path_ids(user_id, db)
     goal = profile.learning_goal if profile else None
     title = req.title or _default_title(goal, candidates)
@@ -167,10 +151,6 @@ def _default_title(goal: Optional[str], candidates) -> str:
     return "个性化学习计划"
 
 
-# ----------------------------------------------------------
-# 查询
-# ----------------------------------------------------------
-
 async def get_study_plan(
     plan_id: int,
     user_id: int,
@@ -200,10 +180,6 @@ async def list_study_plans(
     )
     return [await _plan_to_out(p, user_id, db) for p in plans]
 
-
-# ----------------------------------------------------------
-# 更新 / 删除
-# ----------------------------------------------------------
 
 async def update_study_plan(
     plan_id: int,
@@ -355,10 +331,6 @@ async def generate_resources_for_item(
     except Exception as e:
         logger.exception("[StudyPlan] item={} 资源生成失败: {}", item_id, e)
 
-
-# ----------------------------------------------------------
-# 序列化辅助
-# ----------------------------------------------------------
 
 async def _resolve_resource_refs(
     resource_ids: list[int],

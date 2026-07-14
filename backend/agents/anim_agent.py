@@ -1,8 +1,3 @@
-"""
-backend/agents/anim_agent.py
-AnimAgent：基于 p5.js 生成教学动画 sketch（针对 anim-runtime 助手库的 defineAnimation 调用）。
-"""
-
 from __future__ import annotations
 
 from loguru import logger
@@ -20,23 +15,13 @@ SYSTEM_PROMPT = _prompts.get("agents.anim.system_prompt")
 
 
 async def run(state: AgentState, config: RunnableConfig = None) -> AgentState:
-    """
-    AnimAgent 节点入口。
-
-    职责：
-    1. 检索相关文档
-    2. 调用 LLM 生成 p5.js 动画 sketch（defineAnimation 调用）
-    3. 写入 state.draft_content
-    """
+    """AnimAgent 节点入口。"""
     kp_name = await resolve_kp_name(state, config)
 
-    # 检索相关文档
     context, retrieved_texts = await retrieve_context(state, "AnimAgent")
 
-    # 更新 retrieved_docs
     state = state.model_copy(update={"retrieved_docs": retrieved_texts})
 
-    # 构建画像上下文
     profile_summary = ""
     if state.profile:
         try:
@@ -46,7 +31,6 @@ async def run(state: AgentState, config: RunnableConfig = None) -> AgentState:
     else:
         profile_summary = "（暂无画像信息）"
 
-    # 构造 prompt
     prompt = SYSTEM_PROMPT.format(
         context=context,
         kp_name=kp_name,

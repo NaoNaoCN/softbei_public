@@ -1,9 +1,5 @@
-/* ============================================================
-   dialog.js — 自定义确认对话框
-   替代原生 confirm()，三种模式：danger / normal / input
-   返回 Promise<boolean|string>
-   用法: const ok = await showDialog({ type:'danger', title:'...', desc:'...' })
-   ============================================================ */
+/* dialog.js — 自定义确认对话框，替代原生 confirm()。
+   三种模式 danger/normal/input，返回 Promise<boolean|string>。 */
 
 let overlay = null;
 
@@ -64,7 +60,6 @@ export function showDialog(opts = {}) {
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
         });
 
-        // 图标
         const iconWrap = document.createElement('div');
         Object.assign(iconWrap.style, {
             width: '52px', height: '52px', borderRadius: '50%',
@@ -73,13 +68,11 @@ export function showDialog(opts = {}) {
         iconWrap.innerHTML = '<i data-lucide="' + cfg.icon + '" style="width:26px;height:26px;color:' + cfg.color + ';"></i>';
         box.appendChild(iconWrap);
 
-        // 标题
         const titleEl = document.createElement('div');
         titleEl.textContent = title;
         titleEl.style.cssText = 'font-size:17px;font-weight:600;color:#1E1E2E;text-align:center;';
         box.appendChild(titleEl);
 
-        // 描述
         if (desc) {
             const descEl = document.createElement('div');
             descEl.textContent = desc;
@@ -87,7 +80,6 @@ export function showDialog(opts = {}) {
             box.appendChild(descEl);
         }
 
-        // 输入框 (type=input)
         let inputEl = null;
         if (type === 'input') {
             inputEl = document.createElement('input');
@@ -104,7 +96,6 @@ export function showDialog(opts = {}) {
             box.appendChild(inputEl);
         }
 
-        // 按钮行
         const btnRow = document.createElement('div');
         btnRow.style.cssText = 'display:flex;gap:12px;width:100%;margin-top:4px;';
 
@@ -148,14 +139,11 @@ export function showDialog(opts = {}) {
         overlayEl.style.opacity = '1';
         overlayEl.style.pointerEvents = 'auto';
 
-        // 入场动画
         requestAnimationFrame(() => { box.style.transform = 'scale(1)'; });
 
-        // Esc 关闭
         const escHandler = (e) => { if (e.key === 'Escape') { close(false); document.removeEventListener('keydown', escHandler); } };
         document.addEventListener('keydown', escHandler);
 
-        // 点击遮罩关闭
         overlayEl.onclick = (e) => { if (e.target === overlayEl) close(false); };
 
         if (typeof lucide !== 'undefined') lucide.createIcons({ attrs: { 'data-lucide': '' } });

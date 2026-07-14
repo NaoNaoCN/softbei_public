@@ -1,7 +1,4 @@
-"""
-backend/services/chat_history.py
-多轮对话历史管理：加载、截断、token 估算。
-"""
+"""多轮对话历史管理：加载、截断、token 估算。"""
 
 from __future__ import annotations
 
@@ -42,10 +39,8 @@ def truncate_history(
     if not history:
         return []
 
-    # Step 1: 按轮数截断（保留最近 max_turns 轮）
     truncated = history[-(_max_turns * 2):]
 
-    # Step 2: 按 token 预算从后往前保留
     total_tokens = 0
     keep_from = 0
     for i in range(len(truncated) - 1, -1, -1):
@@ -57,7 +52,7 @@ def truncate_history(
 
     result = truncated[keep_from:]
 
-    # Step 3: 确保从 user 消息开始
+    # 确保从 user 消息开始
     if result and result[0].get("role") == "assistant":
         result = result[1:]
 

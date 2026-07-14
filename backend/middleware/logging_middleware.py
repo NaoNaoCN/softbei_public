@@ -1,6 +1,4 @@
-"""
-backend/middleware/logging_middleware.py
-请求日志中间件：为每个请求注入 trace_id，记录请求入口、耗时、响应状态。
+"""请求日志中间件：为每个请求注入 trace_id，记录请求入口、耗时、响应状态。
 trace_id 通过 ContextVar 传递，并由 logging_config.py 的 patcher 自动注入日志 extra。
 """
 
@@ -37,7 +35,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
     """FastAPI 中间件：记录请求入口、trace_id、HTTP 方法、路径、耗时、状态码。"""
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        # 健康检查端点跳过日志
         if request.url.path in _HEALTH_CHECK_PATHS:
             return await call_next(request)
 

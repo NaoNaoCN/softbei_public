@@ -1,7 +1,6 @@
 /**
- * 页面停留时长追踪器
- * 自动记录用户在每个页面的活跃停留时间，离开页面时上报到后端。
- * 使用方式：在页面底部添加 <script src="./assets/tracker.js"></script>
+ * 页面停留时长追踪器 — 记录活跃停留时间并在离开时上报。
+ * 用法：<script src="./assets/tracker.js"></script>
  */
 (function() {
     'use strict';
@@ -11,13 +10,12 @@
     const HEARTBEAT_INTERVAL = 60; // 每 60 秒发一次心跳保底上报
 
     let startTime = Date.now();
-    let activeTime = 0;     // 累计活跃时间（毫秒）
+    let activeTime = 0;
     let lastActive = Date.now();
     let isVisible = true;
     let reported = false;
     let heartbeatTimer = null;
 
-    // 获取用户 ID
     function getUserId() {
         return localStorage.getItem('user_id');
     }
@@ -26,14 +24,12 @@
         return localStorage.getItem('access_token');
     }
 
-    // 获取当前页面名称
     function getPageName() {
         const path = window.location.pathname;
         const file = path.split('/').pop() || 'index.html';
         return file.replace('.html', '');
     }
 
-    // 上报停留时长
     function reportDuration(durationSec) {
         const userId = getUserId();
         if (!userId || durationSec < MIN_DURATION) return;
@@ -45,7 +41,6 @@
             duration_seconds: durationSec,
         };
 
-        // 使用 sendBeacon 确保页面关闭时也能发送
         const url = `${API_BASE}/records?user_id=${encodeURIComponent(userId)}`;
         const headers = { 'Content-Type': 'application/json' };
         const token = getToken();
@@ -62,11 +57,10 @@
                 keepalive: true,
             }).catch(() => {});
         } catch (e) {
-            // 静默失败
         }
     }
 
-    // 心跳上报：每隔一段时间上报一次，防止用户长时间停留但从不离开
+    // 心跳上报：防止用户长时间停留但从不离开导致数据丢失
     function heartbeat() {
         const userId = getUserId();
         if (!userId) return;
@@ -91,29 +85,24 @@
             keepalive: true,
         }).catch(() => {});
 
-        // 重置计时
         activeTime = 0;
         lastActive = Date.now();
         reported = false;
     }
 
-    // 页面可见性变化
     function handleVisibility() {
         if (document.hidden) {
-            // 页面隐藏，累计活跃时间
             if (isVisible) {
                 activeTime += Date.now() - lastActive;
                 isVisible = false;
             }
         } else {
-            // 页面恢复可见
             lastActive = Date.now();
             isVisible = true;
             reported = false;
         }
     }
 
-    // 页面卸载
     function handleUnload() {
         if (isVisible) {
             activeTime += Date.now() - lastActive;
@@ -122,7 +111,6 @@
         reportDuration(totalSec);
     }
 
-    // 初始化
     function init() {
         if (!getUserId()) return; // 未登录不追踪
 
@@ -130,11 +118,9 @@
         window.addEventListener('beforeunload', handleUnload);
         window.addEventListener('pagehide', handleUnload);
 
-        // 心跳定时器：每 60 秒上报一次累计时间
         heartbeatTimer = setInterval(heartbeat, HEARTBEAT_INTERVAL * 1000);
     }
 
-    // DOM ready 后初始化
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {

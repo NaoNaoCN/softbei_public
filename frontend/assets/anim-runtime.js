@@ -1,13 +1,5 @@
-/*
- * frontend/assets/anim-runtime.js
- * 教学动画运行时：在沙箱 iframe 中为 LLM 生成的 p5.js sketch 提供稳定 API。
- *
- * LLM 生成的代码只调用全局 defineAnimation({ width, height, title, scenes:[{name,duration,draw}] })。
- * 时间轴、播放控制、标题/进度绘制、缓动与公式渲染全部由本运行时接管。
- *
- * 工具集 u 的所有绘图方法都【不需要】传入 p5 实例作为首参（运行时内部持有 _p）。
- * 为兼容旧代码，若首参恰好是 p5 实例会被自动忽略。
- */
+// frontend/assets/anim-runtime.js
+// 教学动画运行时：为沙箱 iframe 中 LLM 生成的 p5.js sketch 提供稳定 API 与播放控制。
 (function () {
   "use strict";
 
@@ -29,7 +21,6 @@
     return Array.prototype.slice.call(a);
   }
 
-  // ---- 缓动与插值 ----
   function ease(t) {
     t = Math.max(0, Math.min(1, t));
     return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -53,7 +44,7 @@
     try { _p.stroke.apply(_p, a); } catch (e) { _p.stroke(PALETTE.text); }
   }
 
-  // ---- 绘图辅助（均不需传 p）----
+  // 绘图辅助：均不需传入 p5 实例
   function arrow() {
     var a = _args(arguments), x1 = a[0], y1 = a[1], x2 = a[2], y2 = a[3];
     _p.push();
@@ -85,8 +76,7 @@
     _p.pop();
   }
 
-  // ---- LaTeX 叠加层管理 ----
-  // KaTeX 渲染为 DOM，绝对定位覆盖在 canvas 上方（字体可靠生效）。
+  // LaTeX 叠加层：KaTeX 渲染为 DOM，绝对定位覆盖在 canvas 上方（字体可靠生效）。
   var latexLayer = null;
   var latexPool = {}; // key -> {el, used}
   function ensureLatexLayer() {
@@ -127,7 +117,6 @@
     }
     entry.el.style.fontSize = fontSize + "px";
     entry.el.style.display = "block";
-    // 居中：用元素自身尺寸把 (x,y) 当作中心
     var w = entry.el.offsetWidth || 0, h = entry.el.offsetHeight || 0;
     var CW = TOOLS.W || 800, CH = TOOLS.H || 460, M = 8;
     // 若公式比画布还宽，自动缩小字号直到放得下（最低 10px）
@@ -161,9 +150,7 @@
   window.__animSetP = function (p) { _p = p; };
   window.__animLatexHooks = { begin: latexBeginFrame, end: latexEndFrame };
 
-  // ====================================================================
   // 运行时引擎：接收 defineAnimation 配置，驱动 p5 时间轴与播放控制
-  // ====================================================================
   var MIN_DURATION = 3500;  // 每场景最短时长（毫秒），防止一闪而过
   var HOLD_MS = 900;        // 场景内容绘制完成后的静止观察期（毫秒）
 
@@ -207,7 +194,6 @@
 
     var W = config.width || 800, H = config.height || 460;
     var TITLE = config.title || "教学动画";
-    // 填充布局辅助：内容区中心
     TOOLS.W = W; TOOLS.H = H;
     TOOLS.cx = W / 2;
     TOOLS.cy = TOP + (H - TOP - BOTTOM) / 2;
@@ -233,7 +219,6 @@
         }
         var now = Math.min(STATE.elapsedMs, STATE.totalMs - 1);
 
-        // 找到当前场景
         var idx = 0;
         for (var i = 0; i < STATE.bounds.length; i++) {
           if (now >= STATE.bounds[i][0] && now < STATE.bounds[i][1]) { idx = i; break; }
@@ -246,7 +231,6 @@
         var animSpan = Math.max(1, holdStart - b[0]);
         var t = Math.min(1, (now - b[0]) / animSpan);
 
-        // 背景 + 标题 + 步骤名
         p.background(PALETTE.bg);
         latexBeginFrame();
         p.push();
@@ -266,7 +250,6 @@
           return;
         }
 
-        // 进度条（底部）
         var pr = now / Math.max(1, STATE.totalMs);
         p.push();
         p.noStroke(); p.fill("#EEF0F6");
@@ -287,7 +270,6 @@
     wireControls();
   };
 
-  // ---- 播放控制 ----
   function syncButtons() {
     var btn = document.getElementById("anim-playpause");
     if (btn) btn.textContent = STATE.playing ? "⏸ 暂停" : "▶ 播放";

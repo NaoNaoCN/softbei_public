@@ -1,7 +1,4 @@
-"""
-backend/agents/planner_agent.py
-PlannerAgent：解析用户意图，决定生成哪种资源类型并确定目标知识点。
-"""
+"""PlannerAgent：解析用户意图，决定生成哪种资源类型并确定目标知识点。"""
 
 from __future__ import annotations
 
@@ -28,31 +25,22 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
     """
     PlannerAgent 节点入口。
 
-    职责：
-    1. 结合 user_message 和 profile 分析意图
-    2. 确定 resource_type 和 kp_id
-    3. 写入 state 供后续 Agent 使用
-
     如果 state 中已预设了 resource_type 和 kp_id（直接生成模式），跳过 LLM 分析。
     """
-    # 如果已经预设了 resource_type 和 kp_id，直接跳过
     if state.resource_type and state.kp_id:
         logger.info(
             f"[PlannerAgent] 跳过分析（已预设 resource_type={state.resource_type}, kp_id={state.kp_id}）"
         )
         return state
-    # 从 config 中获取 db
     db = None
     if config and "configurable" in config:
         db = config["configurable"].get("db")
 
-    # -- 1. 构建画像上下文 --
     profile_ctx = ""
     if state.profile:
         profile_ctx = await profile_svc.build_profile_context(state.profile)
-    logger.info(f"[PlannerAgent] profile_ctx={profile_ctx}")  # 调试输出
+    logger.info(f"[PlannerAgent] profile_ctx={profile_ctx}")
 
-    # -- 1.5 意图分类：generate vs clarify --
     lookback = app_config.agents.planner.history_lookback_messages
     if state.chat_history:
         # 只有有历史时才需要判断是否为追问
@@ -79,7 +67,6 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
 
     state = state.model_copy(update={"intent_type": "generate"})
 
-    # -- 2. 获取可用知识点列表（按用户过滤 + 上限保护）--
     kp_list = ""
     if db:
         try:
@@ -101,7 +88,6 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
         except Exception:
             kp_list = "（知识点列表获取失败）"
 
-    # -- 3. 调用 LLM 分析意图 --
     logger.info(f"[PlannerAgent] Analyzing intent.")
     kp_section = ""
     if kp_list:
@@ -124,14 +110,12 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
         resource_type_str = result.get("resource_type")
         kp_id = result.get("kp_id")
 
-        # 设置 resource_type
         if resource_type_str:
             try:
                 state = state.model_copy(update={"resource_type": ResourceType(resource_type_str)})
             except ValueError:
                 state = state.model_copy(update={"resource_type": None})
 
-        # 设置 kp_id
         if kp_id:
             state = state.model_copy(update={"kp_id": kp_id})
 
@@ -155,7 +139,6 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
         # 解析失败时默认生成文档
         state = state.model_copy(update={"resource_type": ResourceType.doc})
 
-    # 确保 resource_type 有值
     if not state.resource_type:
         state = state.model_copy(update={"resource_type": ResourceType.doc})
 
@@ -173,7 +156,6 @@ def route_by_resource_type(state: AgentState) -> str:
     LangGraph 条件路由：根据 intent_type 和 resource_type 决定下一个 Agent 节点名称。
     返回值需与 graph.py 中注册的节点名对应。
     """
-    # 追问/澄清意图 → clarify_agent
     if state.intent_type == "clarify":
         return "clarify_agent"
 
@@ -188,7 +170,7 @@ def route_by_resource_type(state: AgentState) -> str:
     }
     if state.resource_type and state.resource_type in mapping:
         return mapping[state.resource_type]
-    return "recommend_agent"  # 默认推荐
+    return "recommend_agent"
 
 
 SMART_PLAN_PROMPT = _prompts.get("agents.planner.smart_plan")
@@ -203,7 +185,6 @@ async def plan_resource_types(
     独立调用 planner LLM，根据用户画像和知识点推荐资源类型组合。
     不依赖 LangGraph 图执行。
     """
-    # 获取用户画像
     profile_ctx = ""
     if db:
         try:
@@ -213,7 +194,6 @@ async def plan_resource_types(
         except Exception:
             pass
 
-    # 获取知识点名称
     kp_name = kp_id
     if db and kp_id.startswith("kp_"):
         try:
@@ -246,7 +226,6 @@ async def plan_resource_types(
     except Exception as e:
         logger.warning(f"[plan_resource_types] LLM 解析失败: {e}")
 
-    # 默认推荐
     default_types = []
     for rt_str in app_config.agents.planner.smart_plan_default_types:
         try:

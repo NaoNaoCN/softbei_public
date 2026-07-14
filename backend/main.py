@@ -1,7 +1,4 @@
-"""
-backend/main.py
-FastAPI 应用入口：路由注册、生命周期管理、中间件配置。
-"""
+"""FastAPI 应用入口：路由注册、生命周期管理、中间件配置。"""
 
 from __future__ import annotations
 
@@ -18,11 +15,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# -------------------------------------------------------
 # 自定义 JSON 编码器：将超过 JS 安全整数范围的 int 序列化为字符串
 # JavaScript Number 只能精确表示 ±2^53-1，Snowflake ID（64-bit）会丢失精度
-# -------------------------------------------------------
-_JS_MAX_SAFE_INTEGER = 2**53 - 1  # 9007199254740991
+_JS_MAX_SAFE_INTEGER = 2**53 - 1
 
 
 class _SafeIntEncoder(json.JSONEncoder):
@@ -116,10 +111,7 @@ from backend.db.models import User, ChatSession, ChatMessage, KGNode, KGEdge, Qu
 # 内存任务字典：{task_id: {status, progress, stage, doc_id, error, result}}
 _doc_import_tasks: dict[str, dict] = {}
 
-# ===========================================================
 # JWT 配置（从 configs/config.yaml 读取）
-# ===========================================================
-
 from backend.config import config as app_config
 from backend.logging_config import logger  # noqa: F401
 
@@ -127,10 +119,7 @@ JWT_SECRET = app_config.jwt.secret
 JWT_ALGORITHM = app_config.jwt.algorithm
 JWT_EXPIRE_HOURS = app_config.jwt.expire_hours
 
-# ===========================================================
 # Lifespan（应用启动 / 关闭）
-# ===========================================================
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """初始化数据库连接池与向量库，启动后台清理任务，关闭时释放资源。"""
@@ -174,10 +163,7 @@ async def lifespan(app: FastAPI):
         await close_db()
 
 
-# ===========================================================
 # 应用实例
-# ===========================================================
-
 app = FastAPI(
     title="A3 个性化学习多智能体系统",
     version=app_config.server.version,
@@ -217,10 +203,7 @@ if html_dir.exists():
     app.mount("/app", StaticFiles(directory=str(html_dir), html=True), name="html")
 
 
-# ===========================================================
 # 健康检查
-# ===========================================================
-
 @app.get("/health", tags=["system"])
 async def health():
     """系统健康检查接口，返回各组件状态。"""
@@ -231,10 +214,7 @@ async def health():
     }
 
 
-# ===========================================================
 # 用户认证
-# ===========================================================
-
 # 内存限流：{user_id: [timestamp, ...]}
 _rate_limit_store: dict[int, list[datetime]] = {}
 
@@ -456,7 +436,6 @@ async def send_learning_report(
     if not user or not user.email:
         raise HTTPException(status_code=400, detail="未设置邮箱")
 
-    # 统计数据
     resource_count = (await db.execute(
         sa.select(sa.func.count(ResourceMeta.id)).where(ResourceMeta.user_id == user_id)
     )).scalar() or 0
@@ -498,14 +477,12 @@ async def send_study_plan_email(
     import sqlalchemy as sa
     import backend.services.study_plan as sp
 
-    # 获取用户信息
     user = (await db.execute(sa.select(User).where(User.id == user_id))).scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
     if not user.email:
         raise HTTPException(status_code=400, detail="未设置邮箱地址，请先在个人中心绑定邮箱")
 
-    # 获取学习计划
     plan = await sp.get_study_plan(plan_id, user_id, db)
     if not plan:
         raise HTTPException(status_code=404, detail="学习计划不存在")
@@ -662,9 +639,7 @@ async def generate_study_plan_item_resources(
     return {"message": f"已触发 {len(types)} 种资源生成", "resource_types": types}
 
 
-# ===========================================================
 # 学生画像
-# ===========================================================
 
 @app.get("/profile", response_model=Optional[StudentProfileOut], tags=["profile"])
 async def get_profile(
@@ -780,9 +755,7 @@ async def get_user(
     return user
 
 
-# ===========================================================
 # 对话（Agent 入口）
-# ===========================================================
 
 @app.get("/chat/sessions", response_model=list[ChatSessionOut], tags=["chat"])
 async def list_sessions(user_id: int, db: AsyncSession = Depends(get_session)):
@@ -910,7 +883,6 @@ async def chat(
             batch_out = await resource_svc.create_batch(user_id, batch_req, db)
             batch_id = str(batch_out.batch_id)
 
-            # 构建子任务配置
             task_configs = []
             for task_item in batch_out.tasks:
                 task_configs.append({
@@ -1040,9 +1012,7 @@ async def update_session_title(
     return {"ok": True}
 
 
-# ===========================================================
 # 知识图谱
-# ===========================================================
 
 @app.get("/kg/graph", response_model=KGGraphOut, tags=["knowledge-graph"])
 async def get_kg_graph(
@@ -1247,9 +1217,7 @@ async def get_kg_build_status_by_doc(
     )
 
 
-# ===========================================================
 # 资源生成
-# ===========================================================
 
 @app.post("/generate", response_model=GenerateTaskOut, tags=["generate"])
 async def start_generation(
@@ -1266,7 +1234,6 @@ async def start_generation(
     from backend.services.generation import run_generation
     task = await resource_svc.create_generation_task(user_id, body, db)
 
-    # 获取或创建会话 ID
     session_id = str(generate_id())
 
     # 将 body 转为可序列化的 dict，避免 Pydantic 模型在 background task 中反序列化失败
@@ -1360,9 +1327,7 @@ async def smart_plan_resources(
     return {"resource_types": [rt.value for rt in types]}
 
 
-# ===========================================================
 # 资源库
-# ===========================================================
 
 @app.get("/resources", response_model=ResourceListOut, tags=["resources"])
 async def list_resources(
@@ -1425,9 +1390,7 @@ async def delete_resource(
     return {"deleted": True}
 
 
-# ===========================================================
 # 测验
-# ===========================================================
 
 @app.get("/resources/{resource_id}/quiz", response_model=list[QuizItemOut], tags=["quiz"])
 async def get_quiz_items(
@@ -1705,9 +1668,7 @@ async def get_quiz_attempts(
     return result
 
 
-# ===========================================================
 # 学习路径
-# ===========================================================
 
 from backend.services import pathway as pathway_svc
 
@@ -1818,9 +1779,7 @@ async def remove_pathway_item(
     return {"deleted": True}
 
 
-# ===============================================================
 # 文档导入
-# ===============================================================
 
 @app.post("/documents/import", tags=["documents"])
 async def import_document(
@@ -2041,9 +2000,7 @@ async def delete_document(
     return {"deleted": True}
 
 
-# ===========================================================
 # 学习记录
-# ===========================================================
 
 @app.post("/records", response_model=LearningRecordOut, tags=["records"])
 async def add_record(
@@ -2067,9 +2024,7 @@ async def list_records(
     return await resource_svc.list_learning_records(user_id, db, skip, limit, kp_id)
 
 
-# ===========================================================
 # RAG 评估端点
-# ===========================================================
 
 @app.post("/eval/rag/query", tags=["evaluation"])
 async def evaluate_rag_query(
@@ -2204,9 +2159,7 @@ async def list_eval_records(
     ]
 
 
-# ===========================================================
 # 学习效果评估 — 综合分析仪表盘
-# ===========================================================
 
 @app.get("/analytics/dashboard", tags=["analytics"])
 async def get_learning_analytics(
@@ -2267,7 +2220,6 @@ async def get_learning_analytics(
         # 综合掌握度 = 正确率 * 0.7 + 答题效率 * 0.3
         mastery_score = round(accuracy * 0.7 + time_score * 0.3)
 
-        # 查询知识点名称
         kp_node = await db.execute(
             sa.select(KGNode.name).where(KGNode.id == kp_id)
         )

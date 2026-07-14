@@ -1,7 +1,4 @@
-"""
-backend/services/pathway.py
-学习路径服务：LearningPath 和 LearningPathItem 的 CRUD 操作。
-"""
+"""学习路径服务：LearningPath 和 LearningPathItem 的 CRUD 操作。"""
 
 from __future__ import annotations
 
@@ -28,15 +25,10 @@ from backend.models.schemas import (
 )
 
 
-# ----------------------------------------------------------
-# 学习路径（LearningPath）
-# ----------------------------------------------------------
-
 async def get_pathway(
     path_id: int,
     db: AsyncSession,
 ) -> Optional[LearningPathOut]:
-    """按 ID 获取单条学习路径。"""
     path = await select_one(
         db, LearningPath,
         filters={"id": path_id},
@@ -51,7 +43,6 @@ async def list_pathways(
     user_id: int,
     db: AsyncSession,
 ) -> list[LearningPathOut]:
-    """列举用户的所有学习路径。"""
     paths = await select(
         db, LearningPath,
         filters={"user_id": user_id},
@@ -65,7 +56,6 @@ async def create_pathway(
     data: LearningPathCreate,
     db: AsyncSession,
 ) -> LearningPathOut:
-    """创建新学习路径。"""
     path = await insert(
         db, LearningPath,
         data={"user_id": user_id, "title": data.name, "description": data.description},
@@ -85,8 +75,6 @@ async def update_pathway(
     data: LearningPathUpdate,
     db: AsyncSession,
 ) -> Optional[LearningPathOut]:
-    """更新学习路径标题/描述。"""
-    # 确认归属
     path = await select_one(db, LearningPath, filters={"id": path_id, "user_id": user_id})
     if not path:
         return None
@@ -113,18 +101,12 @@ async def delete_pathway(
     删除学习路径（级联删除 items）。
     先删 items 再删 path。
     """
-    # 确认归属
     path = await select_one(db, LearningPath, filters={"id": path_id, "user_id": user_id})
     if not path:
         return False
-    # 删除关联的 items（按 path_id 过滤）
     await delete(db, LearningPathItem, {"path_id": path_id}, commit=False)
     return await delete_by_id(db, LearningPath, path_id)
 
-
-# ----------------------------------------------------------
-# 学习路径项（LearningPathItem）
-# ----------------------------------------------------------
 
 async def add_pathway_item(
     path_id: int,
@@ -132,13 +114,10 @@ async def add_pathway_item(
     data: LearningPathItemCreate,
     db: AsyncSession,
 ) -> Optional[LearningPathItemOut]:
-    """向学习路径添加一个知识点项。"""
-    # 确认 path 归属正确
     path = await select_one(db, LearningPath, filters={"id": path_id, "user_id": user_id})
     if not path:
         return None
 
-    # 查找节点，确保属于当前用户或公共节点
     kp_node = await select_one(db, KGNode, filters={"id": data.kp_id})
     resolved_kp_id = data.kp_id
 
@@ -202,7 +181,6 @@ async def update_pathway_item(
             "action": "complete",
         })
 
-    # 重新查询以获取更新后的数据
     updated = await select_one(db, LearningPathItem, filters={"id": item_id}, loadRelations=["kp"])
     return _item_to_out(updated)
 
@@ -221,10 +199,6 @@ async def remove_pathway_item(
         return False
     return await delete_by_id(db, LearningPathItem, item_id)
 
-
-# ----------------------------------------------------------
-# 辅助函数
-# ----------------------------------------------------------
 
 def _item_to_out(item: LearningPathItem) -> LearningPathItemOut:
     return LearningPathItemOut(

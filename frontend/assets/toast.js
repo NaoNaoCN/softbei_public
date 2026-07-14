@@ -1,8 +1,5 @@
-/* ============================================================
-   toast.js — 非阻塞通知系统
-   替代全站 alert()，支持 4 种类型 + 操作按钮 + 自动消失
-   使用: showToast('消息', 'success', [{ label:'撤销', onClick:... }])
-   ============================================================ */
+/* toast.js — 非阻塞通知系统，替代全站 alert()
+   用法: showToast('消息', 'success', [{ label:'撤销', onClick:... }]) */
 
 let toastContainer = null;
 let toastTimer = null;
@@ -51,24 +48,20 @@ export function showToast(message, type = 'info', actions = [], duration = 3500)
         position: 'relative', overflow: 'hidden',
     });
 
-    // 主行
     const row = document.createElement('div');
     row.style.display = 'flex';
     row.style.alignItems = 'flex-start';
     row.style.gap = '10px';
 
-    // 图标
     const iconWrap = document.createElement('div');
     iconWrap.innerHTML = '<i data-lucide="' + cfg.icon + '" style="width:18px;height:18px;color:' + cfg.color + ';"></i>';
     iconWrap.style.flexShrink = '0';
     iconWrap.style.marginTop = '1px';
 
-    // 消息
     const msgEl = document.createElement('div');
     msgEl.textContent = message;
     msgEl.style.cssText = 'flex:1;font-size:14px;color:#1E1E2E;line-height:1.5;';
 
-    // 关闭按钮
     const closeBtn = document.createElement('button');
     closeBtn.innerHTML = '<i data-lucide="x" style="width:14px;height:14px;"></i>';
     Object.assign(closeBtn.style, {
@@ -82,7 +75,6 @@ export function showToast(message, type = 'info', actions = [], duration = 3500)
     row.appendChild(closeBtn);
     el.appendChild(row);
 
-    // 操作按钮行
     if (actions.length > 0) {
         const actionsRow = document.createElement('div');
         actionsRow.style.cssText = 'display:flex;gap:8px;padding-left:28px;';
@@ -103,7 +95,6 @@ export function showToast(message, type = 'info', actions = [], duration = 3500)
         el.appendChild(actionsRow);
     }
 
-    // 进度条
     if (duration > 0) {
         const bar = document.createElement('div');
         Object.assign(bar.style, {
@@ -122,7 +113,6 @@ export function showToast(message, type = 'info', actions = [], duration = 3500)
 
     container.appendChild(el);
 
-    // 入场动画
     requestAnimationFrame(() => {
         el.style.opacity = '1';
         el.style.transform = 'translateX(0)';

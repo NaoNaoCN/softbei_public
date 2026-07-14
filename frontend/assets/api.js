@@ -3,10 +3,6 @@
 
 const API_BASE = window.location.origin;
 
-// ===========================================================
-// 基础工具
-// ===========================================================
-
 export function getUserId() {
     return localStorage.getItem('user_id');
 }
@@ -50,10 +46,6 @@ export async function apiFetch(endpoint, options = {}) {
     return resp;
 }
 
-// ===========================================================
-// 认证
-// ===========================================================
-
 export async function authLogin(username, password) {
     try {
         const resp = await apiFetch('/auth/login', {
@@ -88,10 +80,6 @@ export async function authRegister(username, password, email = null) {
         return null;
     }
 }
-
-// ===========================================================
-// 画像
-// ===========================================================
 
 export async function getProfile(user_id) {
     const resp = await apiFetch(`/profile?user_id=${encodeURIComponent(user_id)}`);
@@ -131,10 +119,6 @@ export async function deleteAccount(user_id, username, password) {
     return resp?.json();
 }
 
-// ===========================================================
-// 资源
-// ===========================================================
-
 export async function getResources(user_id, { resource_type, kp_id, skip, limit } = {}) {
     let url = `/resources?user_id=${encodeURIComponent(user_id)}`;
     if (resource_type) url += `&resource_type=${encodeURIComponent(resource_type)}`;
@@ -164,10 +148,6 @@ export async function deleteResource(resource_id, user_id) {
     });
     return resp?.ok;
 }
-
-// ===========================================================
-// 生成任务
-// ===========================================================
 
 export async function startGeneration(user_id, kp_id, resource_type, num_questions = 4, question_type_counts = null) {
     const body = { kp_id, resource_type, num_questions };
@@ -210,10 +190,6 @@ export async function smartPlanResources(userId, kpId) {
     return resp?.json();
 }
 
-// ===========================================================
-// 知识图谱
-// ===========================================================
-
 export async function getKgGraph(params = {}) {
     let url = '/kg/graph?';
     const searchParams = new URLSearchParams();
@@ -225,10 +201,6 @@ export async function getKgGraph(params = {}) {
     const resp = await apiFetch(url);
     return resp?.json();
 }
-
-// ===========================================================
-// 学习路径
-// ===========================================================
 
 export async function getPathways(user_id) {
     const resp = await apiFetch(`/pathways?user_id=${encodeURIComponent(user_id)}`);
@@ -268,10 +240,6 @@ export async function deletePathway(path_id, user_id) {
     });
     return resp?.ok;
 }
-
-// ===========================================================
-// 聊天
-// ===========================================================
 
 export async function getChatSessions(user_id) {
     const resp = await apiFetch(`/chat/sessions?user_id=${encodeURIComponent(user_id)}`);
@@ -320,10 +288,6 @@ export async function updateSessionTitle(session_id, user_id, title) {
     return resp?.ok;
 }
 
-// ===========================================================
-// 测验
-// ===========================================================
-
 export async function getQuizItems(resource_id, user_id) {
     let url = `/resources/${resource_id}/quiz`;
     if (user_id) url += `?user_id=${encodeURIComponent(user_id)}`;
@@ -346,10 +310,6 @@ export async function getQuizAttempts(user_id, limit = 50) {
     const resp = await apiFetch(`/quiz/attempts?user_id=${encodeURIComponent(user_id)}&limit=${limit}`);
     return resp?.json();
 }
-
-// ===========================================================
-// 文档
-// ===========================================================
 
 export async function getDocuments(user_id, skip, limit) {
     let url = `/documents?user_id=${encodeURIComponent(user_id)}`;
@@ -410,10 +370,6 @@ export async function deleteDocument(doc_id, user_id) {
     return resp?.ok;
 }
 
-// ===========================================================
-// 学习记录
-// ===========================================================
-
 export async function postLearningRecord(user_id, data) {
     const resp = await apiFetch(`/records?user_id=${encodeURIComponent(user_id)}`, {
         method: 'POST',
@@ -432,18 +388,10 @@ export async function getLearningRecords(user_id, { kp_id, limit, skip } = {}) {
     return resp?.json();
 }
 
-// ===========================================================
-// 学习分析仪表盘
-// ===========================================================
-
 export async function getLearningAnalytics(user_id) {
     const resp = await apiFetch(`/analytics/dashboard?user_id=${encodeURIComponent(user_id)}`);
     return resp?.json();
 }
-
-// ===========================================================
-// 学习计划
-// ===========================================================
 
 export async function sendStudyPlanEmail(plan_id, user_id) {
     const resp = await apiFetch(`/study-plan/email?plan_id=${plan_id}&user_id=${user_id}`, {

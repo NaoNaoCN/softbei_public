@@ -1,6 +1,4 @@
-"""
-backend/email/sender.py
-异步邮件发送器，封装 aiosmtplib，支持自动重试。
+"""异步邮件发送器，封装 aiosmtplib，支持自动重试。
 SMTP 未配置时自动切换为本地文件模式（保存 .html 到 debug_emails/ 目录）。
 """
 

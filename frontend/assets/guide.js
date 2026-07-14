@@ -1,10 +1,6 @@
-﻿/**
- * 新用户引导组件
- * - 首次登录时弹出欢迎屏 + 11步高亮引导
- * - 使用 localStorage 按用户 ID 记录引导完成状态
- */
+/* guide.js — 新用户引导组件：首次登录弹出欢迎屏 + 11 步高亮引导。
+   引导完成状态按用户 ID 记录在 localStorage。 */
 (function () {
-    // 获取用户 ID（兼容多种存储方式）
     function getUserId() {
         try {
             const raw = localStorage.getItem('user');
@@ -20,15 +16,14 @@
     if (!userId) return;
 
     const guideKey = `softbei_guide_done_${userId}`;
-    if (localStorage.getItem(guideKey)) return; // 已完成引导
+    if (localStorage.getItem(guideKey)) return;
 
-    // 立即创建一个隐藏标记元素，让 assistant.js 能检测到引导即将开始
+    // 立即创建隐藏标记元素，让 assistant.js 能检测到引导即将开始
     const marker = document.createElement('div');
     marker.className = 'guide-pending';
     marker.style.display = 'none';
     document.body.appendChild(marker);
 
-    // 引导步骤配置（适配 topbar 导航结构）
     const steps = [
         {
             selector: '.topbar-nav',
@@ -97,8 +92,6 @@
             position: 'center'
         }
     ];
-
-    // 注入样式
     const style = document.createElement('style');
     style.textContent = `
         .guide-overlay {
@@ -194,7 +187,6 @@
 
     let currentStep = -1; // -1 = 欢迎屏
 
-    // 显示欢迎屏
     function showWelcome() {
         const welcome = document.createElement('div');
         welcome.className = 'guide-welcome';
@@ -212,7 +204,6 @@
         `;
         document.body.appendChild(welcome);
 
-        // 渲染 Lucide 图标
         if (typeof lucide !== 'undefined') lucide.createIcons();
 
         document.getElementById('guideStartBtn').onclick = () => {
@@ -225,7 +216,6 @@
         };
     }
 
-    // 开始引导
     function startGuide() {
         const overlay = document.createElement('div');
         overlay.className = 'guide-overlay';
@@ -244,7 +234,6 @@
         `;
         document.body.appendChild(overlay);
 
-        // 渲染进度圆点
         const dotsEl = document.getElementById('guideDots');
         dotsEl.innerHTML = steps.map((_, i) =>
             `<div class="guide-dot ${i === 0 ? 'active' : ''}" data-i="${i}"></div>`
@@ -282,13 +271,11 @@
         descEl.innerHTML = step.desc;
         nextBtn.textContent = idx === steps.length - 1 ? '完成 ✓' : '下一步 →';
 
-        // 更新圆点
         document.querySelectorAll('.guide-dot').forEach((dot, i) => {
             dot.classList.toggle('active', i === idx);
         });
 
         if (!step.selector) {
-            // 居中展示
             spotlight.style.display = 'none';
             tooltip.style.left = '50%';
             tooltip.style.top = '50%';
@@ -305,7 +292,6 @@
                 spotlight.style.width = (rect.width + pad * 2) + 'px';
                 spotlight.style.height = (rect.height + pad * 2) + 'px';
 
-                // 定位 tooltip
                 positionTooltip(tooltip, rect, step.position);
             }
         }
@@ -326,7 +312,7 @@
             tooltip.style.left = (rect.left - 360 - gap) + 'px';
             tooltip.style.top = rect.top + 'px';
         }
-        // 边界保护
+        // 边界保护：定位后校正超出视口的 tooltip
         requestAnimationFrame(() => {
             const tRect = tooltip.getBoundingClientRect();
             if (tRect.left < 20) {
@@ -346,14 +332,14 @@
 
     function finishGuide() {
         localStorage.setItem(guideKey, '1');
-        // 标记本次会话已弹过，避免引导完成后立即弹出每日提醒（下次登录时会被清除）
+        // 标记本次会话已弹过，避免引导完成后立即弹出每日提醒（下次登录时清除）
         sessionStorage.setItem('softbei_daily_shown', '1');
     }
 
-    // 等待 DOM 加载完成后启动
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => setTimeout(showWelcome, 500));
     } else {
         setTimeout(showWelcome, 500);
     }
 })();
+

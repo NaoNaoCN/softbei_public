@@ -1,7 +1,4 @@
-"""
-backend/agents/safety_agent.py
-SafetyAgent：内容安全验证，过滤幻觉、不当内容，附加引用来源。
-"""
+"""SafetyAgent：内容安全验证，过滤幻觉、不当内容，附加引用来源。"""
 
 from __future__ import annotations
 
@@ -30,7 +27,6 @@ async def run(state: AgentState, config: RunnableConfig = None) -> AgentState:
     3. 若通过：state.final_content = state.draft_content
        若不通过：state.final_content = revised_content，state.safety_passed = False
     """
-    # 若没有 draft_content，跳过检查
     if not state.draft_content:
         logger.info("[SafetyAgent] draft_content 为空，跳过安全检查")
         return state.model_copy(update={
@@ -53,7 +49,6 @@ async def run(state: AgentState, config: RunnableConfig = None) -> AgentState:
             temperature=app_config.agents.safety.temperature,
             max_tokens=app_config.agents.safety.max_tokens,  # 只需返回 passed + issues
         )
-        # 去除 markdown 代码块包裹
         cleaned = parse_json_llm_response(raw)
         result = json.loads(cleaned)
 

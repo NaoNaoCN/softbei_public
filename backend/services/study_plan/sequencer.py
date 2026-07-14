@@ -1,6 +1,4 @@
-"""
-backend/services/study_plan/sequencer.py
-知识点智能排序：调用 LLM 对候选知识点排序并预估学习时长。
+"""知识点智能排序：调用 LLM 对候选知识点排序并预估学习时长。
 
 LLM 失败 / JSON 解析失败时回退到候选原始顺序 + 默认时长，
 保证不依赖 LLM 也能产出可用计划。

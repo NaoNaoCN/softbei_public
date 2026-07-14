@@ -1,7 +1,4 @@
-"""
-backend/db/crud.py
-数据库基础增删改查封装（基于 SQLAlchemy 异步会话）。
-"""
+"""数据库基础增删改查封装（基于 SQLAlchemy 异步会话）。"""
 
 from __future__ import annotations
 

@@ -1,7 +1,4 @@
-"""
-backend/services/study_plan/collector.py
-候选知识点收集：汇总用户已有学习路径的知识点，并用画像薄弱点补全缺口。
-"""
+"""候选知识点收集：汇总用户已有学习路径的知识点，并用画像薄弱点补全缺口。"""
 
 from __future__ import annotations
 
@@ -41,7 +38,6 @@ async def collect_candidates(
     Returns:
         CandidateKP 列表，已按"路径出现顺序 → 画像薄弱点"去重保序。
     """
-    # 1. 选取目标学习路径
     if source == "path" and path_ids:
         paths = await select(
             db, LearningPath,
@@ -61,7 +57,7 @@ async def collect_candidates(
     seen_ids: set[str] = set()
     seen_names: set[str] = set()
 
-    # 2. 汇总路径知识点（按 order_index 排序，去重保序）
+    # 汇总路径知识点（按 order_index 排序，去重保序）
     for path in paths:
         items = sorted(path.items, key=lambda x: x.order_index) if path.items else []
         for item in items:
@@ -85,7 +81,7 @@ async def collect_candidates(
                 )
             )
 
-    # 3. 画像薄弱点补全（仅 aggregate 模式）
+    # 画像薄弱点补全（仅 aggregate 模式）
     if source != "path" and profile is not None:
         weak = getattr(profile, "knowledge_weak", None) or []
         for name in weak:

@@ -1,7 +1,4 @@
-"""
-backend/agents/kg_agent.py
-KGAgent：从已导入文档自动构建知识图谱（KGNode + KGEdge）。
-"""
+"""KGAgent：从已导入文档自动构建知识图谱（KGNode + KGEdge）。"""
 
 from __future__ import annotations
 
@@ -19,7 +16,6 @@ async def run(state: AgentState, config: RunnableConfig = None) -> AgentState:
     从 state.kg_doc_id 或 state.metadata["doc_id"] 获取目标文档 ID，
     调用 kg_builder 构建知识图谱，将结果写入 state。
     """
-    # 获取 db
     db = None
     if config and "configurable" in config:
         db = config["configurable"].get("db")
@@ -31,10 +27,8 @@ async def run(state: AgentState, config: RunnableConfig = None) -> AgentState:
         })
         return state
 
-    # 获取 doc_id
     doc_id = state.kg_doc_id or state.metadata.get("doc_id")
     if not doc_id:
-        # 尝试从 kp_id 推断（用户可能说了文档名）
         state = state.model_copy(update={
             "final_content": "请指定要构建知识图谱的文档。您可以在资源库页面选择已导入的 PDF 文档，点击「构建知识图谱」按钮。",
         })

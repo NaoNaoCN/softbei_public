@@ -1,6 +1,4 @@
-"""
-backend/services/cleanup.py
-文档文件清理服务：定期清理 uploaded_docs/ 目录中的过期文件。
+"""文档文件清理服务：定期清理 uploaded_docs/ 目录中的过期文件。
 
 清理规则：
 1. 已索引文件：超过 retention_days 天后删除
@@ -22,18 +20,11 @@ from loguru import logger
 from backend.config import config
 
 
-# ----------------------------------------------------------
-# 配置常量（从 config 读取，模块加载时解析一次）
-# ----------------------------------------------------------
-
 UPLOAD_DIR = Path(__file__).parent.parent.parent / config.storage.upload_dir
 
 # upload 文件名格式：{uuid_hex_N}_{original_name}
 UPLOAD_NAME_PATTERN = re.compile(rf"^[a-f0-9]{{{config.storage.doc_id_hex_length}}}_.+")
 
-# ----------------------------------------------------------
-# 辅助函数
-# ----------------------------------------------------------
 
 def _resolve_safe_path(filename: str) -> Optional[Path]:
     """取纯文件名（防路径穿越），返回 uploaded_docs/ 下的完整路径。"""
@@ -52,10 +43,6 @@ def _extract_original_name(filename: str) -> str:
     m = re.match(r"^[a-f0-9]{12}_(.+)", filename)
     return m.group(1) if m else filename
 
-
-# ----------------------------------------------------------
-# 核心清理函数
-# ----------------------------------------------------------
 
 async def cleanup_uploaded_docs(
     retention_days: int | None = None,
@@ -87,7 +74,6 @@ async def cleanup_uploaded_docs(
     orphan_cutoff = now - _orphan_retention_days * 86400
     active_cutoff = now - config.storage.cleanup.min_file_age_seconds
 
-    # ---- 1. 收集已索引文件的信息 ----
     indexed_original_names: set[str] = set()
     try:
         if _session_factory is not None:
@@ -96,14 +82,12 @@ async def cleanup_uploaded_docs(
                 for r in resources:
                     if r.content:
                         # content 格式："已导入文档：filename.pdf，共 N 个文本块"
-                        # 或者 "已导入 PDF：filename.pdf，共 N 个文本块"
                         m = re.search(r"已导入(?:文档|PDF|DOCX|Markdown|TXT)：(.+?)[，,]", r.content)
                         if m:
                             indexed_original_names.add(m.group(1))
     except Exception as e:
         logger.warning(f"[Cleanup] 查询 ResourceMeta 失败，将按孤儿策略处理所有文件: {e}")
 
-    # ---- 2. 扫描 uploaded_docs 目录 ----
     if not UPLOAD_DIR.exists():
         logger.info(f"[Cleanup] 目录不存在: {UPLOAD_DIR}")
         return {"scanned": 0, "deleted": 0, "skipped_active": 0,
@@ -120,7 +104,6 @@ async def cleanup_uploaded_docs(
     skipped_retained: list[dict] = []
     errors: list[dict] = []
 
-    # ---- 3. 逐文件判断 ----
     for f in files:
         try:
             file_mtime = f.stat().st_mtime
@@ -185,7 +168,6 @@ async def cleanup_uploaded_docs(
             logger.error(f"[Cleanup] 处理文件 {f.name} 失败: {e}")
             errors.append({"file": f.name, "error": str(e)})
 
-    # ---- 4. 汇总 ----
     total_deleted_bytes = sum(d.get("size_bytes", 0) for d in deleted)
     result = {
         "scanned": len(files),
@@ -216,10 +198,6 @@ async def cleanup_uploaded_docs(
 
     return result
 
-
-# ----------------------------------------------------------
-# 后台清理任务
-# ----------------------------------------------------------
 
 _cleanup_config_cache: Optional[dict] = None
 

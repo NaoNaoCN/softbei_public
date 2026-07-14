@@ -1,7 +1,4 @@
-"""
-backend/evaluation/metrics.py
-RAG 评估指标计算：Precision@K, Recall@K, MRR, NDCG, 分数分布等。
-"""
+"""RAG 评估指标计算：Precision@K, Recall@K, MRR, NDCG, 分数分布等。"""
 
 from __future__ import annotations
 

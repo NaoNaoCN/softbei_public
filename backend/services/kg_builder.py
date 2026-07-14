@@ -1,7 +1,4 @@
-"""
-backend/services/kg_builder.py
-知识图谱自动构建服务：从向量库文本块中提取知识点和关系，写入 KGNode + KGEdge。
-"""
+"""知识图谱自动构建服务：从向量库文本块中提取知识点和关系，写入 KGNode + KGEdge。"""
 
 from __future__ import annotations
 
@@ -23,9 +20,7 @@ from backend.models.schemas import KGNodeType, KGRelation
 from backend.services.llm import chat_completion
 from backend.config import config, prompts as _prompts
 
-# ----------------------------------------------------------
 # Prompts
-# ----------------------------------------------------------
 
 NODE_EXTRACT_PROMPT = _prompts.get("kg_builder.node_extract")
 
@@ -72,10 +67,6 @@ def _build_toc_node_prompt(section_name: str, text: str, llm_types: list[str]) -
 
 EDGE_EXTRACT_CROSS_PROMPT = _prompts.get("kg_builder.edge_extract_cross")
 
-
-# ----------------------------------------------------------
-# 辅助函数
-# ----------------------------------------------------------
 
 def _make_node_id(name: str, doc_id: str = "") -> str:
     """生成节点 ID：kp_{hash(doc_id+name)[:12]}，包含 doc_id 避免跨文档同名冲突。"""
@@ -277,14 +268,12 @@ def _fill_missing_hierarchy_edges(nodes: list[dict], edges: list[dict]) -> list[
         e["source"] for e in edges if e["relation"] == "IS_PART_OF"
     }
 
-    # 按类型分组
     by_type: dict[str, list[str]] = {t: [] for t in _ALL_TYPES}
     for n in nodes:
         t = n.get("type", "Concept")
         if t in by_type:
             by_type[t].append(n["name"])
 
-    # 上级候选类型映射
     parent_type_map = {
         "Concept":        ["SubPoint", "KnowledgePoint", "Chapter"],
         "SubPoint":       ["KnowledgePoint", "Chapter"],
@@ -295,7 +284,7 @@ def _fill_missing_hierarchy_edges(nodes: list[dict], edges: list[dict]) -> list[
     for child_type, parent_types in parent_type_map.items():
         for child_name in by_type.get(child_type, []):
             if child_name in has_parent:
-                continue  # 已有归属边，跳过
+                continue
             # 找第一个有候选节点的上级类型
             for pt in parent_types:
                 candidates = by_type.get(pt, [])
@@ -363,7 +352,6 @@ async def _extract_nodes(grouped_texts: list[str]) -> list[dict]:
         for i, text in enumerate(grouped_texts)
     ]
 
-    # 并发执行所有 batch
     results = await asyncio.gather(*tasks)
 
     # 统一去重：同名节点保留第一个出现的
@@ -427,7 +415,7 @@ async def _extract_edges(all_nodes: list[dict]) -> list[dict]:
     i = 0
     while i < len(all_nodes):
         batches.append(all_nodes[i:i + BATCH_SIZE])
-        i += BATCH_SIZE - OVERLAP  # 步长 = BATCH_SIZE - OVERLAP
+        i += BATCH_SIZE - OVERLAP
     total = len(batches)
     logger.info(f"[KG] 关系推断分为 {total} 批（每批 ~{BATCH_SIZE} 节点，重叠 {OVERLAP}）")
 
@@ -451,9 +439,7 @@ async def _extract_edges(all_nodes: list[dict]) -> list[dict]:
     return unique_edges
 
 
-# ----------------------------------------------------------
 # TOC 路径：带章节上下文的节点提取 & 跨章节关系推断
-# ----------------------------------------------------------
 
 async def _extract_toc_batch(
     i: int, section: dict, total: int, llm_types: list[str],
@@ -567,9 +553,7 @@ async def _extract_cross_edges(all_nodes: list[dict]) -> list[dict]:
     return unique
 
 
-# ----------------------------------------------------------
 # 主入口
-# ----------------------------------------------------------
 
 async def build_kg(doc_id: str, db: AsyncSession, on_progress=None, user_id=None) -> dict[str, Any]:
     """
@@ -579,7 +563,6 @@ async def build_kg(doc_id: str, db: AsyncSession, on_progress=None, user_id=None
     :param on_progress: 可选回调 async def(progress: int, stage: str)
     返回 {"nodes_count": int, "edges_count": int, "doc_id": str}
     """
-    # 1. 从向量库获取文本块
     logger.info(f"[KG] 开始构建知识图谱，doc_id={doc_id}")
     if on_progress:
         await on_progress(5, "文本处理中")
@@ -592,7 +575,6 @@ async def build_kg(doc_id: str, db: AsyncSession, on_progress=None, user_id=None
 
     logger.info(f"[KG] doc_id={doc_id}, 共 {len(documents)} 个文本块")
 
-    # 2. 尝试提取 PDF 目录
     toc = None
     try:
         from backend.db.crud import select_one
@@ -673,7 +655,6 @@ async def build_kg(doc_id: str, db: AsyncSession, on_progress=None, user_id=None
     if not nodes:
         return {"nodes_count": 0, "edges_count": 0, "doc_id": doc_id}
 
-    # 5. 清除该 doc 关联的旧数据
     if on_progress:
         await on_progress(85, "写入数据库")
     #    先查出该 course_id 下所有旧节点 ID，再删相关边和节点
@@ -693,13 +674,12 @@ async def build_kg(doc_id: str, db: AsyncSession, on_progress=None, user_id=None
         )
     await db.flush()
 
-    # 6. 收集所有节点实例（去重：同名节点只保留第一个）
     name_to_id: dict[str, str] = {}
     edge_count = 0
     node_instances: list[KGNode] = []
     for node in nodes:
         if node["name"] in name_to_id:
-            continue  # 跳过重复名称的节点
+            continue
         node_id = _make_node_id(node["name"], doc_id)
         name_to_id[node["name"]] = node_id
         node_instances.append(KGNode(
@@ -711,7 +691,7 @@ async def build_kg(doc_id: str, db: AsyncSession, on_progress=None, user_id=None
             user_id=user_id,
         ))
 
-    # 7. 自动创建 Course 根节点
+    # 自动创建 Course 根节点
     from backend.db.crud import select_one
     from backend.db.models import ResourceMeta
     doc_resource = await select_one(db, ResourceMeta, filters={"kp_id": doc_id})
@@ -727,7 +707,6 @@ async def build_kg(doc_id: str, db: AsyncSession, on_progress=None, user_id=None
     ))
     name_to_id[course_title] = course_node_id
 
-    # 8. 收集所有边实例
     seen_edges: set[tuple[str, str, str]] = set()
     edge_instances: list[KGEdge] = []
 
@@ -760,7 +739,6 @@ async def build_kg(doc_id: str, db: AsyncSession, on_progress=None, user_id=None
                 ))
                 edge_count += 1
 
-    # 9. 批量写入
     db.add_all(node_instances)
     db.add_all(edge_instances)
     await db.commit()
@@ -773,9 +751,7 @@ async def build_kg(doc_id: str, db: AsyncSession, on_progress=None, user_id=None
     }
 
 
-# ----------------------------------------------------------
 # 异步后台任务入口
-# ----------------------------------------------------------
 
 async def run_kg_build(task_id, doc_id: str, db: AsyncSession, user_id=None) -> None:
     """后台执行 KG 构建，通过 KGBuildTask 记录进度。

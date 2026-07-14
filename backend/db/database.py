@@ -1,6 +1,5 @@
-"""
-backend/db/database.py
-PostgreSQL 数据库连接池与基础 CRUD 助手（异步 SQLAlchemy 2.x）。
+"""PostgreSQL 数据库连接池与基础 CRUD 助手（异步 SQLAlchemy 2.x）。
+
 Schema 管理由 Alembic 负责，此处不再调用 create_all。
 """
 
@@ -23,10 +22,6 @@ from sqlalchemy.orm import DeclarativeBase
 from backend.config import config
 
 
-# ----------------------------------------------------------
-# stdlib logging → loguru 桥接
-# ----------------------------------------------------------
-
 class _LoguruHandler(stdlib_logging.Handler):
     """将 stdlib logging 记录桥接到 loguru，确保 SQLAlchemy 等库的日志统一输出。"""
 
@@ -47,19 +42,13 @@ def _setup_db_logging() -> None:
     sa_logger.addHandler(_LoguruHandler())
     sa_logger.propagate = False
 
-# ----------------------------------------------------------
-# ORM Base
-# ----------------------------------------------------------
 
 class Base(DeclarativeBase):
     """所有 ORM 模型的基类"""
     pass
 
 
-# ----------------------------------------------------------
 # Engine & Session factory（模块级单例，应用启动时初始化）
-# ----------------------------------------------------------
-
 _engine: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
 
@@ -86,7 +75,6 @@ async def init_db() -> None:
         "command_timeout": db_cfg.command_timeout,
     }
 
-    # 桥接 SQLAlchemy 日志到 loguru
     _setup_db_logging()
 
     _engine = create_async_engine(
@@ -100,7 +88,6 @@ async def init_db() -> None:
         connect_args=connect_args,
     )
 
-    # 记录连接池事件
     @event.listens_for(_engine.sync_engine, "connect")
     def _on_connect(dbapi_connection, connection_record):
         logger.debug("[Database] 新连接建立: pool_size={}", db_cfg.pool_size)

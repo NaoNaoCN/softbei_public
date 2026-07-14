@@ -1,12 +1,7 @@
-"""
-backend/evaluation/analyzer.py
-RAG 评估分析引擎：从评估报告中识别瓶颈、模式、生成改进建议。
+"""RAG 评估分析引擎：从评估报告中识别瓶颈、模式、生成改进建议。
 
 用法：
-    # 分析最新的黄金测试集报告
     python -m backend.evaluation.analyzer --run
-
-    # 从 DB 分析指定时间范围的数据
     python -m backend.evaluation.analyzer --from-db --since 2026-05-01
 """
 
@@ -26,20 +21,13 @@ from backend.evaluation.models import (
     KPBreakdown,
 )
 
-# ===========================================================
 # 质量阈值（与 reporter.py 参考标准对齐）
-# ===========================================================
-
 _THRESHOLDS: dict[str, tuple[str, float]] = {
     "faithfulness":      ("high", 0.70),
     "completeness":      ("high", 0.60),
     "precision_at_5":    ("high", 0.60),
 }
 
-
-# ===========================================================
-# 分析引擎
-# ===========================================================
 
 class RAGAnalyzer:
     """RAG 评估分析器。
@@ -53,10 +41,6 @@ class RAGAnalyzer:
 
     def __init__(self):
         self._thresholds = _THRESHOLDS.copy()
-
-    # ----------------------------------------------------------
-    # 主入口
-    # ----------------------------------------------------------
 
     async def analyze_golden_report(
         self,
@@ -120,10 +104,6 @@ class RAGAnalyzer:
             },
         )
 
-    # ----------------------------------------------------------
-    # 瓶颈识别
-    # ----------------------------------------------------------
-
     def _identify_bottlenecks(
         self,
         scores: dict[str, float],
@@ -156,15 +136,10 @@ class RAGAnalyzer:
                 "label": label,
             })
 
-        # 排序: critical → warning → ok
         severity_order = {"critical": 0, "warning": 1, "ok": 2}
         bottlenecks.sort(key=lambda b: (severity_order[b["severity"]], b["gap"]))
 
         return bottlenecks
-
-    # ----------------------------------------------------------
-    # 查询分类
-    # ----------------------------------------------------------
 
     def _categorize_queries(
         self,
@@ -201,10 +176,6 @@ class RAGAnalyzer:
 
         return categories
 
-    # ----------------------------------------------------------
-    # 知识点分解
-    # ----------------------------------------------------------
-
     def _build_per_kp_breakdown(
         self,
         results: list[GoldenEvalResult],
@@ -237,10 +208,6 @@ class RAGAnalyzer:
 
         return breakdown
 
-    # ----------------------------------------------------------
-    # 相关性检测
-    # ----------------------------------------------------------
-
     def _check_correlations(
         self,
         scores: dict[str, float],
@@ -257,10 +224,6 @@ class RAGAnalyzer:
             "systemic_issue": prec < 0.40 and faith < 0.60 and comp < 0.50,
         }
 
-    # ----------------------------------------------------------
-    # 优势/劣势识别
-    # ----------------------------------------------------------
-
     def _identify_strengths_weaknesses(
         self,
         bottlenecks: list[dict],
@@ -271,14 +234,12 @@ class RAGAnalyzer:
         strengths = []
         weaknesses = []
 
-        # 优势：超过阈值的指标
         for b in bottlenecks:
             if b["severity"] == "ok":
                 strengths.append(
                     f"{b['metric']}: {b['current']:.2f} (高于阈值 {b['threshold']:.2f}, +{b['gap']:.2f})"
                 )
 
-        # 优势：高通过率的知识点
         healthy_kps = [
             name for name, kp in per_kp_breakdown.items()
             if kp.fail_count == 0
@@ -286,17 +247,14 @@ class RAGAnalyzer:
         if healthy_kps:
             strengths.append(f"{len(healthy_kps)} 个知识点全部通过: {', '.join(healthy_kps)}")
 
-        # 优势：strong 类查询数量
         strong_count = query_categories.get("strong", 0)
         if strong_count > 0:
             strengths.append(f"{strong_count} 条查询在所有指标上均达标 (strong)")
 
-        # 劣势：瓶颈
         for b in bottlenecks:
             if b["severity"] in ("critical", "warning"):
                 weaknesses.append(b["label"])
 
-        # 劣势：零通过率的知识点
         zero_pass_kps = [
             name for name, kp in per_kp_breakdown.items()
             if kp.pass_count == 0
@@ -304,7 +262,6 @@ class RAGAnalyzer:
         if zero_pass_kps:
             weaknesses.append(f"零通过率知识点: {', '.join(zero_pass_kps)}")
 
-        # 劣势：查询分类统计
         weak_count = query_categories.get("retrieval_weak", 0)
         gen_weak_count = query_categories.get("generation_weak", 0)
         both_count = query_categories.get("both_weak", 0)
@@ -328,10 +285,6 @@ class RAGAnalyzer:
 
         return strengths, weaknesses
 
-    # ----------------------------------------------------------
-    # 建议生成
-    # ----------------------------------------------------------
-
     def _generate_suggestions(
         self,
         bottlenecks: list[dict],
@@ -345,7 +298,6 @@ class RAGAnalyzer:
         critical_bottlenecks = [b for b in bottlenecks if b["severity"] == "critical"]
         warning_bottlenecks = [b for b in bottlenecks if b["severity"] == "warning"]
 
-        # 系统性退化
         if correlations.get("systemic_issue"):
             suggestions.append(AnalysisSuggestion(
                 priority="high",
@@ -355,7 +307,6 @@ class RAGAnalyzer:
             ))
             return suggestions
 
-        # KB 覆盖问题：P@5 正常但 completeness 低
         if correlations.get("kb_coverage_issue"):
             zero_kps = [
                 name for name, kp in per_kp_breakdown.items()
@@ -374,7 +325,6 @@ class RAGAnalyzer:
                 rationale="当前 chunk 可能粒度太细，丢失了知识点全貌",
             ))
 
-        # 检索质量问题
         if correlations.get("retrieval_quality_issue"):
             suggestions.append(AnalysisSuggestion(
                 priority="high",
@@ -389,7 +339,6 @@ class RAGAnalyzer:
                 rationale="纯向量检索可能不适合所有查询类型",
             ))
 
-        # 生成忠实度问题
         if correlations.get("generation_quality_issue"):
             suggestions.append(AnalysisSuggestion(
                 priority="high",
@@ -404,7 +353,6 @@ class RAGAnalyzer:
                 rationale="高温生成更容易产生与参考资料不一致的陈述",
             ))
 
-        # 通用建议（有一定数量的 warning）
         if warning_bottlenecks:
             if any(b["metric"] == "completeness" for b in warning_bottlenecks):
                 suggestions.append(AnalysisSuggestion(
@@ -421,7 +369,6 @@ class RAGAnalyzer:
                     rationale="faithfulness 偏低需要排查 LLM 是否有过度创造性输出的倾向",
                 ))
 
-        # 去重（按 action 文本）
         seen = set()
         unique_suggestions = []
         for s in suggestions:
@@ -430,10 +377,6 @@ class RAGAnalyzer:
                 unique_suggestions.append(s)
 
         return unique_suggestions
-
-    # ----------------------------------------------------------
-    # 关键发现
-    # ----------------------------------------------------------
 
     def _generate_key_findings(
         self,
@@ -446,7 +389,6 @@ class RAGAnalyzer:
         """生成 1-3 条关键发现。"""
         findings = []
 
-        # 发现 1: 主瓶颈
         critical = [b for b in bottlenecks if b["severity"] == "critical"]
         if critical:
             findings.append(
@@ -461,7 +403,6 @@ class RAGAnalyzer:
         else:
             findings.append("所有核心指标均高于阈值，系统运行优良")
 
-        # 发现 2: 模式识别
         strong_pct = query_categories.get("strong", 0) / max(
             sum(v for k, v in query_categories.items() if k != "queries_by_category"), 1
         )
@@ -476,7 +417,6 @@ class RAGAnalyzer:
         elif strong_pct >= 0.8:
             findings.append(f"整体表现良好，{strong_pct:.0%} 的查询通过所有指标")
 
-        # 发现 3: 具体问题点
         zero_kps = [
             k for k, v in query_categories.get("queries_by_category", {}).items()
         ]
@@ -488,10 +428,6 @@ class RAGAnalyzer:
 
         return findings
 
-    # ----------------------------------------------------------
-    # 趋势判断
-    # ----------------------------------------------------------
-
     async def _determine_trend(
         self,
         analysis_type: str,
@@ -500,10 +436,6 @@ class RAGAnalyzer:
         """判断趋势（简化版：无历史数据时返回 stable）。"""
         return "stable"
 
-
-# ===========================================================
-# CLI
-# ===========================================================
 
 def main():
     parser = argparse.ArgumentParser(description="RAG 评估分析引擎")

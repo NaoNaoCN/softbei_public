@@ -1,18 +1,10 @@
-﻿/**
- * assistant.js — AI 学习伴侣悬浮面板
- *
- * 功能：
- *   1. 悬浮机器人按钮（右下角）
- *   2. 多 Tab 面板：今日任务 / 学情摘要 / 番茄钟
- *   3. 每日学习提醒弹窗（每天首次进入首页时显示）
- *   4. 随机气泡提示
+/**
+ * assistant.js — AI 学习伴侣悬浮面板（任务/学情/番茄钟、每日提醒、随机气泡）
  */
 
 import { getUserId, isLoggedIn, getLearningAnalytics, getProfile } from './api.js';
 
-// ============================================================
 // 常量
-// ============================================================
 
 const MOTIVATIONS = [
     '坚持就是胜利，今天也要加油学习哦！',
@@ -41,9 +33,7 @@ const GREETINGS = {
     night: '夜深了',
 };
 
-// ============================================================
 // 工具函数
-// ============================================================
 
 function getTimeGreeting() {
     const h = new Date().getHours();
@@ -62,12 +52,9 @@ function getTodayKey(userId) {
     return `softbei_daily_reminder_${userId}_${today}`;
 }
 
-// ============================================================
 // 创建 DOM
-// ============================================================
 
 function createAssistantDOM() {
-    // 悬浮按钮
     const fab = document.createElement('button');
     fab.className = 'ai-bot-fab';
     fab.id = 'aiBotFab';
@@ -78,12 +65,10 @@ function createAssistantDOM() {
     `;
     fab.setAttribute('aria-label', '小知 · AI 学习助手');
 
-    // 气泡
     const bubble = document.createElement('div');
     bubble.className = 'ai-bot-bubble';
     bubble.id = 'aiBotBubble';
 
-    // 主面板
     const panel = document.createElement('div');
     panel.className = 'ai-bot-panel';
     panel.id = 'aiBotPanel';
@@ -156,7 +141,6 @@ function createAssistantDOM() {
         </div>
     `;
 
-    // 每日提醒弹窗
     const reminder = document.createElement('div');
     reminder.className = 'daily-reminder-overlay';
     reminder.id = 'dailyReminder';
@@ -180,19 +164,14 @@ function createAssistantDOM() {
     document.body.appendChild(panel);
     document.body.appendChild(reminder);
 
-    // 渲染 Lucide 图标
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
-
-// ============================================================
 // 面板 & Tab 交互
-// ============================================================
 
 let panelOpen = false;
 let bubbleTimeout = null;
 let currentTab = 'tasks';
 
-// 全局状态持久化
 function getPanelStateKey() {
     return `softbei_panel_state_${getUserId()}`;
 }
@@ -267,11 +246,9 @@ function scheduleBubbles() {
     }, 90000);
 }
 
-// ============================================================
 // Tab1: 学习计划
-// ============================================================
 
-let _sharedForgettingItems = null; // 全局共享遗忘知识点缓存
+let _sharedForgettingItems = null;
 
 async function getSharedForgettingItems() {
     if (_sharedForgettingItems !== null) return _sharedForgettingItems;
@@ -311,7 +288,6 @@ async function renderPlanTab() {
     const container = document.getElementById('aiTasksContent');
     if (!container) return;
 
-    // 加载遗忘知识点（共享缓存）
     const forgettingItems = await getSharedForgettingItems();
 
     const plans = getTodayPlan();
@@ -321,7 +297,6 @@ async function renderPlanTab() {
 
     let html = '';
 
-    // 进度概览
     html += `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:#FFF5EC;border-radius:12px;margin-bottom:14px;">
         <div style="position:relative;width:44px;height:44px;flex-shrink:0;">
             <svg viewBox="0 0 36 36" width="44" height="44" style="transform:rotate(-90deg);">
@@ -336,7 +311,6 @@ async function renderPlanTab() {
         </div>
     </div>`;
 
-    // 计划列表
     if (total > 0) {
         html += '<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px;">';
         plans.forEach((item, idx) => {
@@ -355,13 +329,10 @@ async function renderPlanTab() {
         </div>`;
     }
 
-    // 自定义添加输入框
     html += `<div style="display:flex;gap:6px;margin-bottom:10px;">
         <input id="aiPlanInput" type="text" placeholder="输入学习计划..." maxlength="50" style="flex:1;border:1px solid #E5E7EB;border-radius:8px;padding:8px 10px;font-size:12px;outline:none;transition:border-color 0.2s;">
         <button id="aiPlanAddBtn" style="padding:8px 12px;border-radius:8px;border:none;background:linear-gradient(135deg,#C77B3C 0%,#A8652E 100%);color:#fff;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;">添加</button>
     </div>`;
-
-    // 选择复习知识点快捷添加
     const existingTexts = plans.map(p => p.text);
     const available = forgettingItems.filter(item => !existingTexts.includes(`复习：${item.kp_name}`));
     if (available.length > 0) {
@@ -386,7 +357,6 @@ async function renderPlanTab() {
     container.innerHTML = html;
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
-    // 绑定事件
     bindPlanEvents();
 }
 
@@ -394,7 +364,6 @@ function bindPlanEvents() {
     const container = document.getElementById('aiTasksContent');
     if (!container) return;
 
-    // 自定义添加
     const addBtn = document.getElementById('aiPlanAddBtn');
     const input = document.getElementById('aiPlanInput');
     if (addBtn && input) {
@@ -414,7 +383,6 @@ function bindPlanEvents() {
         input.addEventListener('blur', () => input.style.borderColor = '#E5E7EB');
     }
 
-    // 知识点标签点击添加
     container.querySelectorAll('.plan-kp-tag').forEach(tag => {
         tag.addEventListener('click', () => {
             const kpName = tag.dataset.kp;
@@ -425,7 +393,6 @@ function bindPlanEvents() {
         });
     });
 
-    // 勾选完成
     container.querySelectorAll('.plan-item').forEach(el => {
         el.addEventListener('click', (e) => {
             if (e.target.closest('.plan-del')) return;
@@ -439,7 +406,6 @@ function bindPlanEvents() {
         });
     });
 
-    // 删除
     container.querySelectorAll('.plan-del').forEach(el => {
         el.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -452,12 +418,9 @@ function bindPlanEvents() {
     });
 }
 
-// ============================================================
 // Tab2: 学情摘要
-// ============================================================
 
 let statsLoaded = false;
-
 async function loadStatsData() {
     if (statsLoaded) return;
     const userId = getUserId();
@@ -476,11 +439,9 @@ async function loadStatsData() {
 
         const behavior = data.learning_behavior || {};
         const forgetting = (data.forgetting_curve || []).filter(i => i.needs_review);
-        // 同步到共享缓存
         _sharedForgettingItems = forgetting;
         const mastery = data.quiz_mastery || [];
 
-        // 统计卡片
         let html = `<div class="ai-stats-grid">
             <div class="ai-stat-card">
                 <div class="ai-stat-value">${behavior.streak_days || 0}</div>
@@ -500,7 +461,6 @@ async function loadStatsData() {
             </div>
         </div>`;
 
-        // 掌握度 Top 5
         if (mastery.length > 0) {
             html += `<div class="ai-section-title">知识掌握度</div>`;
             const top5 = mastery.sort((a, b) => b.mastery_score - a.mastery_score).slice(0, 5);
@@ -517,7 +477,6 @@ async function loadStatsData() {
             }).join('');
         }
 
-        // 遗忘知识点复习
         if (forgetting.length > 0) {
             html += `<div class="ai-section-title">需要复习 (${forgetting.length})</div>`;
             html += '<div style="display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto;">';
@@ -542,9 +501,7 @@ async function loadStatsData() {
     }
 }
 
-// ============================================================
 // Tab3: 番茄钟
-// ============================================================
 
 let pomoState = 'idle'; // idle | running | paused | resting
 let pomoInterval = null;
@@ -553,8 +510,6 @@ let pomoWorkMin = 25;
 let pomoBreakMin = 5;
 let pomoCount = 0;
 let pomoTotalMin = 0;
-
-// 番茄钟状态持久化
 function getPomoStateKey() {
     const userId = getUserId();
     return `softbei_pomo_state_${userId}`;
@@ -584,22 +539,19 @@ function restorePomoState() {
         pomoBreakMin = data.breakMin || 5;
 
         if (data.state === 'running' || data.state === 'resting') {
-            // 计算离开期间流逝的时间
+            // 补偿页面离开期间流逝的时间
             const elapsed = Math.floor((Date.now() - data.timestamp) / 1000);
             pomoRemaining = (data.remaining || 0) - elapsed;
 
             if (data.state === 'running') {
                 if (pomoRemaining <= 0) {
-                    // 专注已完成，记录并进入休息
                     pomoCount++;
                     pomoTotalMin += pomoWorkMin;
                     savePomodoroStats();
                     pomoState = 'resting';
-                    // 计算休息剩余时间
-                    const restElapsed = Math.abs(pomoRemaining); // 超出的时间
+                    const restElapsed = Math.abs(pomoRemaining); // 专注超时的秒数计入休息
                     pomoRemaining = pomoBreakMin * 60 - restElapsed;
                     if (pomoRemaining <= 0) {
-                        // 休息也已结束
                         pomoState = 'idle';
                         pomoRemaining = pomoWorkMin * 60;
                         clearPomoState();
@@ -608,13 +560,11 @@ function restorePomoState() {
                         savePomoState();
                     }
                 } else {
-                    // 还在专注中，继续计时
                     pomoState = 'running';
                     pomoInterval = setInterval(pomoTick, 1000);
                 }
             } else if (data.state === 'resting') {
                 if (pomoRemaining <= 0) {
-                    // 休息已结束
                     pomoState = 'idle';
                     pomoRemaining = pomoWorkMin * 60;
                     clearPomoState();
@@ -624,7 +574,6 @@ function restorePomoState() {
                 }
             }
         } else if (data.state === 'paused') {
-            // 暂停状态直接恢复
             pomoState = 'paused';
             pomoRemaining = data.remaining || pomoWorkMin * 60;
         }
@@ -655,7 +604,6 @@ function updatePomoDisplay() {
         labelEl.textContent = '专注时间';
     }
 
-    // 按钮
     if (pomoState === 'idle') {
         controlsEl.innerHTML = `<button class="ai-pomo-btn primary" id="aiPomoStart">开始专注</button>`;
     } else if (pomoState === 'running') {
@@ -672,7 +620,6 @@ function updatePomoDisplay() {
         controlsEl.innerHTML = `<button class="ai-pomo-btn secondary" id="aiPomoSkipRest">跳过休息</button>`;
     }
 
-    // 绑定事件
     const startBtn = document.getElementById('aiPomoStart');
     const pauseBtn = document.getElementById('aiPomoPause');
     const resumeBtn = document.getElementById('aiPomoResume');
@@ -685,11 +632,9 @@ function updatePomoDisplay() {
     if (stopBtn) stopBtn.onclick = stopPomodoro;
     if (skipBtn) skipBtn.onclick = skipRest;
 
-    // 统计
     document.getElementById('aiPomoCount').textContent = pomoCount;
     document.getElementById('aiPomoMinutes').textContent = pomoTotalMin;
 }
-
 function startPomodoro() {
     pomoWorkMin = parseInt(document.getElementById('aiPomoWorkMin')?.value) || 25;
     pomoBreakMin = parseInt(document.getElementById('aiPomoBreakMin')?.value) || 5;
@@ -735,21 +680,17 @@ function pomoTick() {
     if (pomoRemaining <= 0) {
         clearInterval(pomoInterval);
         if (pomoState === 'running') {
-            // 专注结束
             pomoCount++;
             pomoTotalMin += pomoWorkMin;
             savePomodoroStats();
             showBubble('太棒了！一个番茄钟完成！休息一下吧～');
-            // 进入休息
             pomoState = 'resting';
             pomoRemaining = pomoBreakMin * 60;
             savePomoState();
             updatePomoDisplay();
             pomoInterval = setInterval(pomoTick, 1000);
-            // 尝试通知
             tryNotification('番茄钟完成！', '你已经专注了 ' + pomoWorkMin + ' 分钟，休息一下吧');
         } else if (pomoState === 'resting') {
-            // 休息结束
             pomoState = 'idle';
             pomoRemaining = pomoWorkMin * 60;
             clearPomoState();
@@ -758,7 +699,7 @@ function pomoTick() {
             tryNotification('休息结束！', '该开始下一个番茄钟了');
         }
     } else {
-        // 每10秒保存一次状态，避免频繁写入
+        // 每 10 秒持久化一次，避免频繁写入 localStorage
         if (pomoRemaining % 10 === 0) savePomoState();
     }
     updatePomoDisplay();
@@ -789,9 +730,7 @@ function tryNotification(title, body) {
     }
 }
 
-// ============================================================
 // 每日学习提醒
-// ============================================================
 
 async function showDailyReminder() {
     console.log('[daily-reminder] 开始执行');
@@ -877,15 +816,13 @@ async function showDailyReminder() {
     tip.textContent = tipText;
     motivation.textContent = `"${getMotivation()}"`;
 
-    // 弹窗显示前再次检查引导是否在展示（因为上面有 await，引导可能在等待期间已开始）
+    // 上面有 await，引导可能在等待期间已开始，显示前再次检查
     if (document.querySelector('.guide-pending') || document.querySelector('.guide-welcome') || document.querySelector('.guide-overlay')) return;
 
-    // 标记本次会话已弹过
     sessionStorage.setItem('softbei_daily_shown', '1');
 
     overlay.classList.add('show');
 
-    // 渲染弹窗内的 Lucide 图标
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
     document.getElementById('reminderStartBtn').onclick = () => {
@@ -895,23 +832,18 @@ async function showDailyReminder() {
         overlay.classList.remove('show');
     };
 }
-
-// ============================================================
 // 初始化
-// ============================================================
 
 function init() {
     if (!isLoggedIn()) return;
 
     createAssistantDOM();
 
-    // 悬浮按钮
     document.getElementById('aiBotFab').addEventListener('click', togglePanel);
 
-    // 点击面板外关闭
     document.addEventListener('click', (e) => {
         if (!panelOpen) return;
-        // 如果点击的元素已被移除（重新渲染导致），不关闭面板
+        // 元素已被移除（重新渲染导致）时不关闭面板
         if (!e.target.isConnected) return;
         const panel = document.getElementById('aiBotPanel');
         const fab = document.getElementById('aiBotFab');
@@ -920,21 +852,16 @@ function init() {
         }
     });
 
-    // Tab 切换
     document.querySelectorAll('.ai-panel-tab').forEach(tab => {
         tab.addEventListener('click', () => switchTab(tab.dataset.tab));
     });
 
-    // 番茄钟：恢复状态 + 加载今日统计
     loadPomodoroStats();
     restorePomoState();
     updatePomoDisplay();
 
-    // 恢复面板状态（Tab + 打开/关闭）
     restorePanelState();
-    // 应用恢复的 Tab
     switchTab(currentTab);
-    // 应用恢复的打开状态
     if (panelOpen) {
         const fab = document.getElementById('aiBotFab');
         const panel = document.getElementById('aiBotPanel');
@@ -942,31 +869,23 @@ function init() {
         panel.classList.add('open');
     }
 
-    // 预加载学习计划（仅当当前 Tab 是 tasks 时）
     if (currentTab === 'tasks') renderPlanTab();
 
-    // 请求通知权限
     if ('Notification' in window && Notification.permission === 'default') {
-        // 延迟请求，不打扰用户
+        // 延迟请求，避免打扰用户
         setTimeout(() => Notification.requestPermission(), 30000);
     }
 
-    // 气泡
     scheduleBubbles();
 
-    // 今日已学习时长计时
     initTodayTimer();
 
-    // 每日提醒（仅首页）
     showDailyReminder();
 
-    // 如果有遗忘知识点，显示红点提示
     checkBadge();
 }
 
-// ============================================================
 // 今日已学习时长
-// ============================================================
 
 let todayTimerInterval = null;
 let lastSavedSessionSec = 0; // 上次已保存到 localStorage 的本次会话秒数
@@ -1013,9 +932,8 @@ function updateTodayTimeDisplay() {
 }
 
 function initTodayTimer() {
-    // 立即更新一次
     updateTodayTimeDisplay();
-    // 每 30 秒更新显示 + 增量保存
+    // 每 30 秒更新显示并增量保存
     todayTimerInterval = setInterval(() => {
         const sessionNow = getCurrentSessionSeconds();
         const delta = sessionNow - lastSavedSessionSec;
@@ -1037,13 +955,10 @@ function initTodayTimer() {
         }
     });
 
-    // 每小时休息提醒
     initHourlyRestReminder();
 }
 
-// ============================================================
 // 每小时休息提醒
-// ============================================================
 
 let restReminderCreated = false;
 let lastRestReminderHour = 0; // 上次弹出提醒时的小时数
@@ -1090,24 +1005,22 @@ function initHourlyRestReminder() {
     const userId = getUserId();
     if (!userId) return;
 
-    // 读取今天已提醒过的小时数
     const key = getRestReminderKey(userId);
     lastRestReminderHour = parseInt(localStorage.getItem(key) || '0', 10);
 
-    // 每 60 秒检测一次是否达到新的整小时
     setInterval(() => {
         const stored = getStoredTodaySeconds();
         const sessionDelta = getCurrentSessionSeconds() - lastSavedSessionSec;
         const totalSec = stored + sessionDelta;
         const totalHours = Math.floor(totalSec / 3600);
 
-        // 如果达到了新的整小时且未提醒过
+        // 达到新的整小时且未提醒过时弹出
         if (totalHours > 0 && totalHours > lastRestReminderHour) {
             lastRestReminderHour = totalHours;
             localStorage.setItem(key, String(totalHours));
             showRestReminder(totalHours);
         }
-    }, 60000); // 每分钟检测一次
+    }, 60000);
 }
 
 async function checkBadge() {
@@ -1124,9 +1037,9 @@ async function checkBadge() {
     } catch (e) { /* ignore */ }
 }
 
-// 页面加载后初始化
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
     init();
 }
+

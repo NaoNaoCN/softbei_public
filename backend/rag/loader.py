@@ -1,5 +1,4 @@
 """
-backend/rag/loader.py
 文档加载器：将本地文件（PDF / DOCX / Markdown / TXT）解析为纯文本块，
 并附加结构化元数据，供后续索引使用。
 """
@@ -24,10 +23,6 @@ from langchain_core.documents import Document
 from backend.config import config
 
 
-# ----------------------------------------------------------
-# 数据结构
-# ----------------------------------------------------------
-
 @dataclass
 class TextChunk:
     """单个文本块，携带来源元数据。"""
@@ -42,7 +37,6 @@ class TextChunk:
     metadata: dict = field(default_factory=dict)  # 额外元数据
 
     def to_langchain_doc(self) -> Document:
-        """转换为 LangChain Document。"""
         return Document(
             page_content=self.text,
             metadata={
@@ -57,7 +51,6 @@ class TextChunk:
 
     @classmethod
     def from_langchain_doc(cls, doc: Document, doc_id: str, chunk_index: int) -> "TextChunk":
-        """从 LangChain Document 转换。"""
         meta = doc.metadata
         return cls(
             chunk_id=f"{doc_id}_{chunk_index}",
@@ -70,10 +63,6 @@ class TextChunk:
                       if k not in ("chunk_id", "doc_id", "source", "page", "section")},
         )
 
-
-# ----------------------------------------------------------
-# 核心接口
-# ----------------------------------------------------------
 
 def extract_toc(file_path: str | Path) -> list[dict] | None:
     """
@@ -314,7 +303,6 @@ def split_text(
             t = t.replace(key, original)
         return t
 
-    # ---- 找到表格区域 ----
     table_regions = _find_table_regions(protected_text)
 
     def _get_enclosing_table(pos: int) -> tuple[int, int] | None:
@@ -377,7 +365,6 @@ def split_text(
             if header and not chunk_text.startswith(header.rstrip()):
                 chunk_text = header + chunk_text
 
-        # 还原代码块
         chunk_text = _restore_code(chunk_text)
         chunks.append(chunk_text)
 
@@ -414,7 +401,6 @@ def docs_to_chunks(docs: list[Document], doc_id: str) -> list[TextChunk]:
         if not text:
             continue
 
-        # 先按配置大小切分
         sub_chunks = split_text(text)
 
         for sub_chunk in sub_chunks:
@@ -426,10 +412,6 @@ def docs_to_chunks(docs: list[Document], doc_id: str) -> list[TextChunk]:
 
     return chunks
 
-
-# ----------------------------------------------------------
-# 私有实现：使用 LangChain Document Loader
-# ----------------------------------------------------------
 
 def _load_pdf(path: Path, doc_id: str) -> list[TextChunk]:
     """
@@ -446,10 +428,6 @@ def _load_pdf(path: Path, doc_id: str) -> list[TextChunk]:
     except Exception as e:
         raise RuntimeError(f"Failed to load PDF {path}: {e}") from e
 
-
-# ----------------------------------------------------------
-# 页码回填
-# ----------------------------------------------------------
 
 def _backfill_page_numbers(
     chunks: list[TextChunk],
@@ -542,7 +520,6 @@ def _split_into_parents(
             t = t.replace(key, original)
         return t
 
-    # 找到表格区域
     table_regions = _find_table_regions(protected) if _find_table_regions else []
 
     def _in_table(pos: int) -> bool:
@@ -598,10 +575,6 @@ def _split_into_parents(
     return chunks
 
 
-# ----------------------------------------------------------
-# 私有辅助函数
-# ----------------------------------------------------------
-
 def _parse_markdown_to_chunks(
     md_text: str,
     doc_id: str,
@@ -641,11 +614,9 @@ def _parse_markdown_to_chunks(
         sub_chunks = split_text(section_text)
         for sub_chunk in sub_chunks:
             meta = {}
-            # 自动检测语言
             lang = _detect_language(sub_chunk)
             if lang:
                 meta["language"] = lang
-            # 自动填充课程名
             if course:
                 meta["course"] = course
 
@@ -693,14 +664,12 @@ def _parse_markdown_to_chunks_parent_child(
     chunk_index = 0
 
     for section_title, section_text in sections:
-        # Step 1: 将章节切分为父块（保护代码块/表格完整性）
         parent_texts = _split_into_parents(section_text, parent_max_chars)
 
         for parent_text in parent_texts:
             parent_id = f"{doc_id}_p{chunk_index}"
             chunk_index += 1
 
-            # 父块元数据
             parent_meta = {}
             lang = _detect_language(parent_text)
             if lang:
@@ -720,7 +689,6 @@ def _parse_markdown_to_chunks_parent_child(
             )
             chunks.append(parent_chunk)
 
-            # Step 2: 父块切分为子块，建立父子关系
             child_texts = split_text(parent_text, chunk_size=child_size)
             for child_text in child_texts:
                 child_meta = {}
@@ -780,7 +748,6 @@ def _split_markdown_by_headers(text: str) -> list[tuple[str, str]]:
             text_section = text_section.replace(key, original)
         return text_section
 
-    # 匹配 #、##、### 三级标题行
     header_pattern = re.compile(r'^(#{1,3})\s+(.+)$', re.MULTILINE)
     headers = list(header_pattern.finditer(text_without_code))
 
@@ -813,7 +780,6 @@ def _split_markdown_by_headers(text: str) -> list[tuple[str, str]]:
         )
 
         section_text = text_without_code[start:end].strip()
-        # 还原代码块（恢复原始内容）
         section_text = _restore_code(section_text)
 
         if section_text:
@@ -821,10 +787,6 @@ def _split_markdown_by_headers(text: str) -> list[tuple[str, str]]:
 
     return sections
 
-
-# ----------------------------------------------------------
-# 便捷函数：直接返回 LangChain Document
-# ----------------------------------------------------------
 
 def load_file_as_documents(file_path: str | Path, doc_id: str | None = None) -> list[Document]:
     """
@@ -863,7 +825,7 @@ def _detect_language(text: str) -> str:
 
     :return: "zh" | "en" | "mixed"
     """
-    cn_chars = len(re.findall(r'[\u4e00-\u9fff]', text))
+    cn_chars = len(re.findall(r'[一-鿿]', text))
     en_chars = len(re.findall(r'[a-zA-Z]', text))
     total = cn_chars + en_chars
     if total == 0:

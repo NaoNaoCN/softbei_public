@@ -1,7 +1,4 @@
-"""
-backend/services/profile.py
-学生画像服务：读取、更新、历史版本管理。
-"""
+"""学生画像服务：读取、更新、历史版本管理。"""
 
 from __future__ import annotations
 
@@ -41,7 +38,6 @@ async def _summarize_learning_goal(questions: list[str]) -> Optional[str]:
     """调用 LLM 对历史提问列表进行总体概括，得到精准的学习目标。失败时返回 None。"""
     if not questions:
         return None
-    # 延迟导入，避免循环依赖
     from backend.services.llm import chat_completion
 
     numbered = "\n".join(f"{i + 1}. {q}" for i, q in enumerate(questions))
@@ -56,10 +52,6 @@ async def _summarize_learning_goal(questions: list[str]) -> Optional[str]:
         logger.warning(f"学习目标概括失败: {e}")
         return None
 
-
-# ----------------------------------------------------------
-# 公开接口
-# ----------------------------------------------------------
 
 async def get_profile(user_id: int, db: AsyncSession) -> Optional[StudentProfileOut]:
     """
@@ -85,7 +77,6 @@ async def create_or_update_profile(
     """
     existing = await select_one(db, StudentProfile, filters={"user_id": user_id})
 
-    # 序列化当前数据为快照
     if existing:
         snapshot = StudentProfileOut.model_validate(existing).model_dump(mode="json")
         await insert(db, ProfileHistory, {"profile_id": existing.id, "snapshot": snapshot}, commit=False)
@@ -107,7 +98,6 @@ async def create_or_update_profile(
         await db.refresh(existing)
         return StudentProfileOut.model_validate(existing)
     else:
-        # 新建画像
         new_profile = await insert(
             db, StudentProfile,
             data={
@@ -123,7 +113,6 @@ async def create_or_update_profile(
                 "goal_questions": data.goal_questions or [],
             }
         )
-        # 初始化历史
         snapshot = StudentProfileOut.model_validate(new_profile).model_dump(mode="json")
         await insert(db, ProfileHistory, {"profile_id": new_profile.id, "snapshot": snapshot})
         return StudentProfileOut.model_validate(new_profile)
@@ -216,7 +205,6 @@ async def merge_chat_updates(
             _schedule_refresh_learning_goal(user_id)
         return created
 
-    # 快照当前状态
     snapshot = StudentProfileOut.model_validate(existing).model_dump(mode="json")
     await insert(db, ProfileHistory, {"profile_id": existing.id, "snapshot": snapshot}, commit=False)
 
@@ -260,7 +248,6 @@ async def merge_chat_updates(
         if merged != existing_list:
             update_data[list_key] = merged
 
-    # 增量记录提问
     if new_questions != existing_questions:
         update_data["goal_questions"] = new_questions
 
@@ -368,11 +355,6 @@ async def build_profile_context(profile: StudentProfileOut) -> str:
     return "，".join(parts)
 
 
-# ----------------------------------------------------------
-# 测验驱动画像更新
-# ----------------------------------------------------------
-
-# 掌握度阈值
 _MASTERY_THRESHOLD = 0.8   # 正确率 >= 80% 视为已掌握
 _WEAK_THRESHOLD = 0.6      # 正确率 < 60% 视为薄弱
 _MIN_ATTEMPTS = 2          # 至少做过 2 题才纳入统计
@@ -394,7 +376,6 @@ async def update_profile_from_quiz(
     import sqlalchemy as sa
     from backend.db.models import QuizAttempt, KGNode
 
-    # 1. 查询该用户在该知识点的所有答题记录
     result = await db.execute(
         sa.select(
             sa.func.count().label("total"),
@@ -412,11 +393,9 @@ async def update_profile_from_quiz(
     correct = row.correct or 0
     accuracy = correct / total
 
-    # 2. 解析知识点名称
     kp_node = await select_one(db, KGNode, filters={"id": kp_id})
     kp_name = kp_node.name if kp_node else kp_id
 
-    # 3. 获取当前画像
     profile = await select_one(db, StudentProfile, filters={"user_id": user_id})
     if not profile:
         return
@@ -426,27 +405,22 @@ async def update_profile_from_quiz(
     error_prone = list(profile.error_prone or [])
     changed = False
 
-    # 4. 根据正确率更新画像
     if accuracy >= _MASTERY_THRESHOLD:
-        # 加入已掌握
         if kp_name not in mastered:
             mastered.append(kp_name)
             changed = True
-        # 从薄弱移除
         if kp_name in weak:
             weak.remove(kp_name)
             changed = True
     elif accuracy < _WEAK_THRESHOLD:
-        # 加入薄弱
         if kp_name not in weak:
             weak.append(kp_name)
             changed = True
-        # 从已掌握移除
         if kp_name in mastered:
             mastered.remove(kp_name)
             changed = True
 
-    # 5. 最近一次答错 → 加入易错点
+    # 最近一次答错 → 加入易错点
     last_attempt = await db.execute(
         sa.select(QuizAttempt).where(
             QuizAttempt.user_id == user_id,
@@ -459,7 +433,6 @@ async def update_profile_from_quiz(
             error_prone.append(kp_name)
             changed = True
 
-    # 6. 持久化
     if changed:
         update_data = {
             "knowledge_mastered": mastered,

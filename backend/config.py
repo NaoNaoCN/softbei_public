@@ -1,8 +1,4 @@
-"""
-backend/config.py
-配置定义 — Pydantic BaseModel 自动映射，从 configs/config.yaml 加载。
-支持 ${ENV_VAR} 格式环境变量引用。
-"""
+"""配置定义 — Pydantic BaseModel 自动映射，从 configs/config.yaml 加载。"""
 
 from __future__ import annotations
 
@@ -18,12 +14,7 @@ from pydantic import BaseModel, Field, field_validator
 load_dotenv(Path(__file__).parent.parent / ".env", override=False)
 
 
-# ===========================================================
-# 配置模型（Pydantic BaseModel，替代原 @dataclass）
-# ===========================================================
-
 class LLMRetryConfig(BaseModel):
-    """LLM 调用重试策略"""
     max_attempts: int = 5
     backoff_multiplier: int = 2
     backoff_min_seconds: int = 3
@@ -31,7 +22,6 @@ class LLMRetryConfig(BaseModel):
 
 
 class LLMTimeoutConfig(BaseModel):
-    """LLM HTTP 超时配置"""
     connect: int = 10
     read: int = 120
     write: int = 30
@@ -54,7 +44,6 @@ class LLMProvidersConfig(BaseModel):
 
 
 class LLMConfig(BaseModel):
-    """LLM 配置"""
     api_key: str = ""
     base_url: str = ""
     model: str = ""
@@ -68,7 +57,6 @@ class LLMConfig(BaseModel):
 
 
 class DatabaseConfig(BaseModel):
-    """数据库配置"""
     url: str = ""
     echo: bool = False
     pool_size: int = 10
@@ -79,13 +67,11 @@ class DatabaseConfig(BaseModel):
 
 
 class VectorDBConfig(BaseModel):
-    """向量库配置"""
     collection: str = "knowledge_base"
     hnsw_ef_search: int = 100          # HNSW 检索精度，越大越精确但越慢
 
 
 class EmbeddingConfig(BaseModel):
-    """Embedding 配置"""
     use_spark: bool = True
     concurrency: int = 8
     api_model: str = "text-embedding-v4"
@@ -101,7 +87,6 @@ class EmbeddingConfig(BaseModel):
 
 
 class ParentChunkingConfig(BaseModel):
-    """父子切割配置"""
     enabled: bool = False
     parent_max_chars: int = 2000
     child_chunk_size: int | None = None   # None = 使用 rag.chunk_size
@@ -120,7 +105,6 @@ class HybridConfig(BaseModel):
 
 
 class RAGConfig(BaseModel):
-    """RAG 配置"""
     chunk_size: int = 500
     chunk_overlap: int = 50
     n_results: int = 5
@@ -149,13 +133,11 @@ class RAGConfig(BaseModel):
 
 
 class TokenEstimationConfig(BaseModel):
-    """Token 估算系数"""
     cn_chars_per_token: float = 1.5
     en_chars_per_token: float = 4.0
 
 
 class ChatConfig(BaseModel):
-    """对话配置"""
     max_turns: int = 10
     history_max_tokens: int = 4000
     message_max_length: int = 4096
@@ -169,7 +151,6 @@ class ChatConfig(BaseModel):
 
 
 class KnowledgeGraphConfig(BaseModel):
-    """知识图谱构建配置"""
     llm_concurrency: int = 10
     max_batches: int = 30
     toc_max_items: int = 100
@@ -191,7 +172,6 @@ class GenerationQuizConfig(BaseModel):
 
 
 class GenerationConfig(BaseModel):
-    """资源生成配置"""
     default_num_questions: int = 4
     max_questions: int = 20
     mindmap_max_depth: int = 4
@@ -200,7 +180,6 @@ class GenerationConfig(BaseModel):
 
 
 class StorageCleanupConfig(BaseModel):
-    """文档存储清理配置"""
     enabled: bool = True
     retention_days: int = 30
     orphan_retention_days: int = 7
@@ -209,7 +188,6 @@ class StorageCleanupConfig(BaseModel):
 
 
 class StorageConfig(BaseModel):
-    """文档存储配置"""
     upload_dir: str = "uploaded_docs"
     knowledge_base_dir: str = "knowledge_base"
     supported_extensions: list[str] = Field(default_factory=lambda: [".pdf", ".docx", ".doc", ".md", ".txt"])
@@ -218,7 +196,6 @@ class StorageConfig(BaseModel):
 
 
 class LoggingConfig(BaseModel):
-    """日志配置"""
     dir: str = "logs"
     retention_days: int = 30
     error_retention_days: int = 90
@@ -229,14 +206,12 @@ class LoggingConfig(BaseModel):
 
 
 class JWTConfig(BaseModel):
-    """JWT 配置"""
     secret: str = ""
     algorithm: str = "HS256"
     expire_hours: int = 24
 
 
 class EmailConfig(BaseModel):
-    """邮件服务配置"""
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_username: str = ""
@@ -257,17 +232,11 @@ class EmailConfig(BaseModel):
         return int(v)
 
 
-# ===========================================================
-# Agent 配置
-# ===========================================================
-
 class ClarifyAgentConfig(BaseModel):
-    """Clarify Agent 配置"""
     temperature: float = 0.7
 
 
 class CodeAgentConfig(BaseModel):
-    """Code Agent 配置"""
     temperature: float = 0.7
     max_tokens: int = 5000
 
@@ -279,19 +248,16 @@ class AnimAgentConfig(BaseModel):
 
 
 class DocAgentConfig(BaseModel):
-    """Doc Agent 配置"""
     temperature: float = 0.7
     max_tokens: int = 4000
 
 
 class MindmapAgentConfig(BaseModel):
-    """Mindmap Agent 配置"""
     temperature: float = 0.5
     max_tokens: int = 2000
 
 
 class PlannerAgentConfig(BaseModel):
-    """Planner Agent 配置"""
     intent_temperature: float = 0.0
     classify_temperature: float = 0.1
     smart_plan_temperature: float = 0.3
@@ -301,7 +267,6 @@ class PlannerAgentConfig(BaseModel):
 
 
 class ProfileAgentConfig(BaseModel):
-    """Profile Agent 配置"""
     extract_temperature: float = 0.1
     intent_temperature: float = 0.0
     clarify_temperature: float = 0.7
@@ -311,13 +276,11 @@ class ProfileAgentConfig(BaseModel):
 
 
 class QuizAgentConfig(BaseModel):
-    """Quiz Agent 配置"""
     temperature: float = 0.6
     max_tokens: int = 3000
 
 
 class RecommendAgentConfig(BaseModel):
-    """Recommend Agent 配置"""
     temperature: float = 0.7
     max_tokens: int = 2000
     min_recommendations: int = 3
@@ -325,7 +288,6 @@ class RecommendAgentConfig(BaseModel):
 
 
 class SafetyAgentConfig(BaseModel):
-    """Safety Agent 配置"""
     temperature: float = 0.1
     max_tokens: int = 300
     max_ref_docs: int = 3
@@ -333,7 +295,6 @@ class SafetyAgentConfig(BaseModel):
 
 
 class SummaryAgentConfig(BaseModel):
-    """Summary Agent 配置"""
     temperature: float = 0.7
     max_tokens: int = 1200
     target_words_min: int = 300
@@ -341,7 +302,6 @@ class SummaryAgentConfig(BaseModel):
 
 
 class AgentsConfig(BaseModel):
-    """所有 Agent 配置汇总"""
     clarify: ClarifyAgentConfig = Field(default_factory=ClarifyAgentConfig)
     code: CodeAgentConfig = Field(default_factory=CodeAgentConfig)
     anim: AnimAgentConfig = Field(default_factory=AnimAgentConfig)
@@ -355,12 +315,7 @@ class AgentsConfig(BaseModel):
     summary: SummaryAgentConfig = Field(default_factory=SummaryAgentConfig)
 
 
-# ===========================================================
-# 其他配置
-# ===========================================================
-
 class VideoSearchConfig(BaseModel):
-    """视频搜索配置"""
     enabled: bool = True
     max_results: int = 3
     min_query_length: int = 2
@@ -370,24 +325,20 @@ class VideoSearchConfig(BaseModel):
 
 
 class PaginationConfig(BaseModel):
-    """分页配置"""
     default_limit: int = 20
     quiz_attempts_limit: int = 50
 
 
 class ServerConfig(BaseModel):
-    """服务配置"""
     version: str = "0.1.0"
     cors_origins: list[str] = Field(default_factory=lambda: ["*"])
 
 
 class AuthConfig(BaseModel):
-    """认证配置"""
     bcrypt_rounds: int = 12
 
 
 class EvaluationSamplingConfig(BaseModel):
-    """评估采样率配置"""
     development: float = 1.0       # 开发模式：全量评估
     production: float = 0.1        # 生产模式：10% 采样
 
@@ -405,19 +356,16 @@ class EvaluationGoldenDatasetConfig(BaseModel):
 
 
 class EvaluationABExperimentConfig(BaseModel):
-    """A/B 实验配置"""
     enabled: bool = False
     groups: list[str] = Field(default_factory=list)
 
 
 class EvaluationStorageConfig(BaseModel):
-    """评估持久化配置"""
     persist_to_db: bool = True
     retention_days: int = 90
 
 
 class EvaluationConfig(BaseModel):
-    """RAG 评估系统配置"""
     enabled: bool = True            # 总开关：关闭后跳过所有评估采集与 LLM Judge
     mode: str = "development"      # "development" | "production"
     health_check_enabled: bool = True
@@ -435,7 +383,6 @@ class StudyPlanSequenceConfig(BaseModel):
 
 
 class StudyPlanConfig(BaseModel):
-    """学习计划表生成配置"""
     default_daily_minutes: int = 60        # 画像未设置每日时长时的兜底值
     default_start_hour: str = "19:00"      # 默认每日起始时刻（仅在请求要求生成时段时使用）
     default_horizon_days: int = 14         # 未指定 days 时的默认排程跨度上限参考
@@ -446,10 +393,6 @@ class StudyPlanConfig(BaseModel):
     target_resource_types: list[str] = Field(default_factory=lambda: ["doc", "mindmap", "quiz"])
     sequence: StudyPlanSequenceConfig = Field(default_factory=StudyPlanSequenceConfig)
 
-
-# ===========================================================
-# 全局配置汇总
-# ===========================================================
 
 class Config(BaseModel):
     """全局配置 — 由 model_validate() 从 YAML 自动构建，无需手工映射。"""
@@ -474,10 +417,6 @@ class Config(BaseModel):
     email: EmailConfig = Field(default_factory=EmailConfig)
 
 
-# ===========================================================
-# 环境变量解析（保留 ${ENV_VAR} 语法兼容）
-# ===========================================================
-
 def _resolve_env_vars(value: Any) -> Any:
     """递归解析 ${ENV_VAR} 和 ${ENV_VAR-default} 格式的环境变量引用"""
     if isinstance(value, str):
@@ -495,10 +434,6 @@ def _resolve_env_vars(value: Any) -> Any:
     return value
 
 
-# ===========================================================
-# 配置加载
-# ===========================================================
-
 def _load_config() -> Config:
     """加载 YAML → 解析 ${ENV_VAR} → model_validate 自动映射到 Config。"""
     config_path = Path(__file__).parent.parent / "configs" / "config.yaml"
@@ -509,10 +444,6 @@ def _load_config() -> Config:
     resolved = _resolve_env_vars(raw)
     return Config.model_validate(resolved)
 
-
-# ===========================================================
-# Prompts 加载
-# ===========================================================
 
 def _load_prompts() -> dict[str, Any]:
     """Load agent prompts from configs/prompts.yaml."""
@@ -558,9 +489,7 @@ class PromptsConfig:
         return val
 
 
-# ===========================================================
 # 全局单例
-# ===========================================================
-
 config = _load_config()
 prompts = PromptsConfig(_load_prompts(), config)
+

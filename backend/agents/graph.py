@@ -1,7 +1,4 @@
-"""
-backend/agents/graph.py
-LangGraph 主状态机：定义节点、边（含条件路由）并编译图。
-"""
+"""LangGraph 主状态机：定义节点、边（含条件路由）并编译图。"""
 
 from __future__ import annotations
 
@@ -28,9 +25,7 @@ from backend.models.schemas import AgentState
 from backend.services.profile import get_profile
 from backend.services.chat_history import load_chat_history
 
-# ----------------------------------------------------------
 # 数据库会话注入辅助
-# ----------------------------------------------------------
 
 async def _run_with_db(node_func, state: AgentState, db: AsyncSession) -> AgentState:
     """
@@ -45,9 +40,7 @@ async def _run_with_db(node_func, state: AgentState, db: AsyncSession) -> AgentS
     return await node_func(state)
 
 
-# ----------------------------------------------------------
 # 图构建
-# ----------------------------------------------------------
 
 def build_graph() -> StateGraph:
     """
@@ -72,7 +65,6 @@ def build_graph() -> StateGraph:
     """
     graph = StateGraph(AgentState)
 
-    # -- 注册节点 --
     graph.add_node("profile_agent", profile_agent.run)
     graph.add_node("planner_agent", planner_agent.run)
     graph.add_node("doc_agent", doc_agent.run)
@@ -86,7 +78,6 @@ def build_graph() -> StateGraph:
     graph.add_node("kg_agent", kg_agent.run)
     graph.add_node("clarify_agent", clarify_agent.run)
 
-    # -- 起始节点 --
     graph.set_entry_point("profile_agent")
 
     # profile → 条件路由（画像不足则直接 END，足够则进 planner）
@@ -157,7 +148,6 @@ async def invoke(user_id: int, session_id: int, message: str, db: AsyncSession) 
 
     existing_profile = await get_profile(user_id, db)
 
-    # 加载多轮对话历史
     chat_history = await load_chat_history(session_id, db)
 
     initial_state = AgentState(
@@ -174,10 +164,8 @@ async def invoke(user_id: int, session_id: int, message: str, db: AsyncSession) 
     )
     final_state = AgentState(**result)
 
-    # -- RAG 评估采集：记录生成结果 --
     _collect_generation_eval(final_state, session_id)
 
-    # -- 异步 LLM-as-Judge 评估（采样触发）--
     _maybe_trigger_async_judge(final_state, session_id)
 
     return final_state
@@ -194,7 +182,6 @@ async def stream_invoke(user_id: int, session_id: int, message: str, db: AsyncSe
 
     existing_profile = await get_profile(user_id, db)
 
-    # 加载多轮对话历史
     chat_history = await load_chat_history(session_id, db)
 
     initial_state = AgentState(
@@ -211,9 +198,7 @@ async def stream_invoke(user_id: int, session_id: int, message: str, db: AsyncSe
         yield event
 
 
-# ----------------------------------------------------------
 # RAG 评估辅助
-# ----------------------------------------------------------
 
 def _collect_generation_eval(state: AgentState, session_id: int) -> None:
     """从 AgentState 中采集生成评估数据。"""
@@ -231,7 +216,6 @@ def _collect_generation_eval(state: AgentState, session_id: int) -> None:
         # 读取各 Agent 记录的生成耗时（由 agent 写入 state.metadata）
         gen_latency = state.metadata.get("generation_latency_ms", 0.0) if state.metadata else 0.0
 
-        # 读取 A/B 实验分组
         experiment_group = state.metadata.get("experiment_group") if state.metadata else None
 
         collector.record_generation(
@@ -263,7 +247,6 @@ def _maybe_trigger_async_judge(state: AgentState, session_id: int) -> None:
 
         session_id_str = str(session_id)
 
-        # 采样决策
         if not collector.decide_sample(session_id_str):
             return
 

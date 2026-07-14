@@ -1,6 +1,5 @@
-"""
-backend/agents/clarify_agent.py
-ClarifyAgent：针对用户追问/澄清请求，基于对话历史给出简短、针对性的回答。
+"""ClarifyAgent：针对用户追问/澄清请求，基于对话历史给出简短、针对性的回答。
+
 不重新生成完整文档，直接对话式回复。
 """
 
@@ -36,7 +35,6 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
     """
     from backend.services import profile as profile_svc
 
-    # 构建画像上下文
     profile_ctx = ""
     if state.profile:
         profile_ctx = await profile_svc.build_profile_context(state.profile)
@@ -46,7 +44,6 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
     messages = [
         {"role": "system", "content": prompt},
     ]
-    # 注入对话历史
     messages.extend(state.chat_history)
     messages.append({"role": "user", "content": state.user_message})
 
@@ -65,7 +62,6 @@ async def run(state: AgentState, config: RunnableConfig) -> AgentState:
             chat_completion(messages, temperature=app_config.agents.clarify.temperature),
             search_videos(video_query, skip_extraction=True),
         )
-        # 后处理：注入视频引用
         if videos:
             response = inject_video_citations(response, videos)
         state = state.model_copy(update={

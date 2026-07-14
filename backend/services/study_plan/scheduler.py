@@ -1,6 +1,4 @@
-"""
-backend/services/study_plan/scheduler.py
-确定性日历排程：把有序知识点按每日时间预算装箱到连续日期上。
+"""确定性日历排程：把有序知识点按每日时间预算装箱到连续日期上。
 
 纯函数模块，不依赖数据库 / LLM，便于单元测试。
 """
@@ -86,7 +84,6 @@ def schedule_items(
     if not kps:
         return ScheduleResult(items=[], start_date=start_date, end_date=start_date)
 
-    # 归一化日预算
     budget = max(1, int(daily_time_minutes or 0))
 
     # 指定 days 时按总时长均摊重算每日预算
@@ -98,8 +95,8 @@ def schedule_items(
 
     items: list[ScheduledItem] = []
     current_date = start_date
-    day_used = 0          # 当天已占用分钟
-    order_in_day = 0      # 当天内序号
+    day_used = 0
+    order_in_day = 0
 
     for kp in kps:
         dur = max(1, int(kp.estimated_minutes or 1))

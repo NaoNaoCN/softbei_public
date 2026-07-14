@@ -1,9 +1,4 @@
-"""
-backend/services/llm.py
-LLM 调用服务层。
-统一封装多个 OpenAI 兼容接口，对 Agent 层屏蔽底层细节。
-所有 provider 的 URL、model、超时、重试策略均从 configs/config.yaml 读取。
-"""
+"""LLM 调用服务层：统一封装多个 OpenAI 兼容接口，对 Agent 层屏蔽底层细节。"""
 
 from __future__ import annotations
 
@@ -17,17 +12,12 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 
 from backend.config import config
 
-# ===========================================================
-# 客户端工厂
-# ===========================================================
-
 # 合法 provider 名称，同时也是自动推导 failover 链时的声明顺序（与 config
 # providers 块一致）。未在此列表中的名称视为非法，解析链时会 warn 并忽略。
 _KNOWN_PROVIDERS = ("spark", "deepseek", "qwen", "openai")
 
 
 def _get_provider_config(provider: str):
-    """根据 provider 名称获取对应的配置。"""
     p = config.llm.providers
     mapping = {
         "spark": p.spark,
@@ -64,10 +54,6 @@ def _make_client(provider: str) -> tuple[AsyncOpenAI, str]:
         timeout=_timeout,
     ), config.llm.model
 
-
-# ===========================================================
-# 核心调用接口
-# ===========================================================
 
 def _build_extra_body(provider: str) -> dict | None:
     """构建 extra_body。enable_thinking 是 Qwen3 系列专有参数，
@@ -278,7 +264,6 @@ _embedding_client: AsyncOpenAI | None = None
 
 
 def _get_embedding_client() -> AsyncOpenAI:
-    """获取 Embedding API 客户端单例。"""
     global _embedding_client
     if _embedding_client is None:
         _embedding_client = AsyncOpenAI(

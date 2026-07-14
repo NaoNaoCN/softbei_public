@@ -1,7 +1,4 @@
-"""
-backend/db/vector.py
-向量存储（基于 pgvector 扩展，向量检索在数据库内完成）。
-"""
+"""向量存储（基于 pgvector 扩展，向量检索在数据库内完成）。"""
 
 from __future__ import annotations
 
@@ -13,10 +10,6 @@ from sqlalchemy import text
 from backend.config import config
 from backend.db.database import get_engine
 
-# ----------------------------------------------------------
-# 配置
-# ----------------------------------------------------------
-
 COLLECTION_NAME: str = config.vector_db.collection
 
 # HNSW ef_search：控制检索精度与速度的平衡，由 config.vector_db.hnsw_ef_search 控制
@@ -26,9 +19,6 @@ def _format_vector(embedding: list[float]) -> str:
     """将 list[float] 转为 pgvector 可解析的字符串（如 "[-0.02, 0.01, ...]"）。"""
     return "[" + ",".join(str(x) for x in embedding) + "]"
 
-# ----------------------------------------------------------
-# 集合代理
-# ----------------------------------------------------------
 
 class _CollectionProxy:
     """向量集合的异步代理。"""
@@ -81,7 +71,6 @@ class _CollectionProxy:
                 "section": row[6] or "",
                 "user_id": row[7] or "",
             }
-            # 合并 JSONB metadata 到结果中
             raw_metadata = row[8] if len(row) > 8 else None
             if raw_metadata and isinstance(raw_metadata, dict):
                 meta.update(raw_metadata)
@@ -93,10 +82,6 @@ class _CollectionProxy:
             "metadatas": metadatas_list,
         }
 
-
-# ----------------------------------------------------------
-# 初始化
-# ----------------------------------------------------------
 
 def init_vector_db() -> None:
     """初始化向量库。pgvector 方案下表由 Alembic 管理，此处仅验证连通性。"""
@@ -113,10 +98,6 @@ def get_collection() -> _CollectionProxy:
         _collection_proxy = _CollectionProxy(COLLECTION_NAME)
     return _collection_proxy
 
-
-# ----------------------------------------------------------
-# 基础操作接口（全部异步化）
-# ----------------------------------------------------------
 
 def _convert_metadata_to_columns(meta: dict) -> dict:
     """将 metadata dict 转换为列值。"""
@@ -327,11 +308,9 @@ async def query_documents(
             "section": row[6] or "",
             "user_id": row[7] or "",
         }
-        # 合并 JSONB metadata 到结果中
         raw_metadata = row[8] if len(row) > 8 else None
         if raw_metadata and isinstance(raw_metadata, dict):
             meta.update(raw_metadata)
-        # 父子切割字段（row[9], row[10]）
         if len(row) > 9 and row[9]:
             meta["parent_chunk_id"] = row[9]
         if len(row) > 10:
@@ -416,7 +395,6 @@ async def get_documents_by_doc_id(doc_id: str, collection_name: Optional[str] = 
             "section": row[3] or "",
             "user_id": row[4] or "",
         }
-        # 合并 JSONB metadata 到结果中
         raw_metadata = row[5] if len(row) > 5 else None
         if raw_metadata and isinstance(raw_metadata, dict):
             meta.update(raw_metadata)
@@ -543,3 +521,6 @@ async def health_check() -> bool:
         return True
     except Exception:
         return False
+
+
+

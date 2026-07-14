@@ -1,15 +1,4 @@
-"""
-backend/evaluation/health_check.py
-Layer 1 健康检查：每次 RAG 请求后采集轻量级指标，不调用 LLM，<5ms 开销。
-
-采集指标：
-- 检索是否为空结果
-- chunk 分数的 min/p50/max
-- 各阶段真实耗时（embedding / DB query 分别计时）
-- 生成长度
-
-当指标超出阈值时输出 WARNING 日志，可选接入外部告警。
-"""
+"""Layer 1 健康检查：每次 RAG 请求后采集轻量级指标，不调用 LLM，<5ms 开销。"""
 
 from __future__ import annotations
 

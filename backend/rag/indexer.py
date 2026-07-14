@@ -1,7 +1,4 @@
-"""
-backend/rag/indexer.py
-向量索引构建器：将 TextChunk 列表嵌入并写入向量库。
-"""
+"""向量索引构建器：将 TextChunk 列表嵌入并写入向量库。"""
 
 from __future__ import annotations
 
@@ -17,13 +14,6 @@ from backend.db.vector import (
 from backend.rag.loader import TextChunk
 from backend.services.llm import get_embeddings_batch
 
-
-# Embedding API 单次最大条数，由 config.embedding.api_max_batch_size 控制
-
-
-# ----------------------------------------------------------
-# 公开接口
-# ----------------------------------------------------------
 
 def _tokenize_for_tsvector(text: str) -> str:
     """
@@ -71,7 +61,6 @@ async def index_chunks(
     for doc_id in unique_doc_ids:
         await delete_by_doc_id(doc_id, collection_name=collection_name)
 
-    # 分离父块和子块
     parents = [c for c in chunks if c.is_parent]
     children = [c for c in chunks if not c.is_parent]
 
@@ -81,7 +70,6 @@ async def index_chunks(
         f"涉及 {len(unique_doc_ids)} 个文档"
     )
 
-    # ---- 父块写入（无嵌入，仅存储文本） ----
     if parents:
         logger.info(f"[Indexer] 写入 {len(parents)} 个父块（无嵌入）...")
         for i in range(0, len(parents), effective_batch_size):
@@ -107,7 +95,6 @@ async def index_chunks(
                 collection_name=collection_name,
             )
 
-    # ---- 子块嵌入 + upsert ----
     total = 0
     batches = list(range(0, len(children), effective_batch_size))
     total_batches = len(batches)
@@ -168,10 +155,7 @@ async def index_file(
     file_path: str,
     collection_name: Optional[str] = None,
 ) -> int:
-    """
-    一键加载并索引单个文件。
-    内部调用 loader.load_file + index_chunks。
-    """
+    """一键加载并索引单个文件。"""
     from backend.rag.loader import load_file
     chunks = load_file(file_path)
     return await index_chunks(chunks, collection_name=collection_name)
@@ -186,10 +170,6 @@ async def index_directory(
     chunks = load_directory(dir_path)
     return await index_chunks(chunks, collection_name=collection_name)
 
-
-# ----------------------------------------------------------
-# 内部辅助
-# ----------------------------------------------------------
 
 async def _embed_batch(texts: list[str]) -> list[list[float]]:
     """批量嵌入文本，使用 API 批量接口一次发送多条。"""

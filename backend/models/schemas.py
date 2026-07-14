@@ -1,7 +1,4 @@
-"""
-backend/models/schemas.py
-Pydantic v2 数据模型，供 FastAPI 路由、Agent 以及前端 API 调用共同使用。
-"""
+"""Pydantic v2 数据模型，供 FastAPI 路由、Agent 以及前端 API 调用共同使用。"""
 
 from __future__ import annotations
 
@@ -12,9 +9,7 @@ from typing import Any, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
-# ===========================================================
 # 枚举定义
-# ===========================================================
 
 class ResourceType(str, Enum):
     doc = "doc"
@@ -61,9 +56,7 @@ class CognitiveStyle(str, Enum):
     practice = "动手型"
 
 
-# ===========================================================
 # 用户相关
-# ===========================================================
 
 # 入站数据（用户提交），包含 password，不含 id/created_at（这些还不存在）
 class UserCreate(BaseModel):
@@ -94,19 +87,13 @@ class AccountDeleteIn(BaseModel):
 
 
 class TokenOut(BaseModel):
-    """
-    这是登录成功后返回给前端的响应体。
-    用户提交用户名+密码 → 后端验证通过 → 生成 JWT token → 用 TokenOut 包装后返回。
-    前端拿到 access_token 之后，后续每个请求都在 HTTP Header 里带上它
-    """
+    """登录成功后返回给前端的响应体，前端拿到 access_token 后在后续请求的 HTTP Header 中携带。"""
     user_id: int
     access_token: str
     token_type: str = "bearer"
 
 
-# ===========================================================
 # 邮箱验证 & 密码重置
-# ===========================================================
 
 class ForgotPasswordIn(BaseModel):
     email: str = Field(..., max_length=256)
@@ -121,9 +108,7 @@ class EmailVerificationOut(BaseModel):
     message: str
 
 
-# ===========================================================
 # 学生画像
-# ===========================================================
 
 class StudentProfileIn(BaseModel):
     """用户提交 / 更新画像时的请求体"""
@@ -148,9 +133,7 @@ class StudentProfileOut(StudentProfileIn):
     model_config = {"from_attributes": True}
 
 
-# ===========================================================
 # 对话会话
-# ===========================================================
 
 class ChatMessageIn(BaseModel):
     content: str = Field(..., min_length=1, max_length=4096)
@@ -175,9 +158,7 @@ class ChatSessionOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-# ===========================================================
 # 知识图谱
-# ===========================================================
 
 class KGNodeOut(BaseModel):
     id: str
@@ -204,9 +185,7 @@ class KGGraphOut(BaseModel):
     edges: list[KGEdgeOut]
 
 
-# ===========================================================
 # 学习路径
-# ===========================================================
 
 class LearningPathItemOut(BaseModel):
     id: int
@@ -248,9 +227,7 @@ class LearningPathUpdate(BaseModel):
     description: Optional[str] = None
 
 
-# ===========================================================
 # 资源生成
-# ===========================================================
 
 class GenerateRequest(BaseModel):
     """触发资源生成的请求体"""
@@ -334,9 +311,7 @@ class ResourceListOut(BaseModel):
     total: int
 
 
-# ===========================================================
 # 测验 / 题目
-# ===========================================================
 
 class QuizItemOut(BaseModel):
     id: int
@@ -378,9 +353,7 @@ class QuizAttemptOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-# ===========================================================
 # 学习记录
-# ===========================================================
 
 class LearningRecordCreate(BaseModel):
     resource_id: Optional[int] = None
@@ -402,9 +375,7 @@ class LearningRecordOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-# ===========================================================
 # 学习计划表（Study Plan）
-# ===========================================================
 
 class StudyPlanResourceRef(BaseModel):
     """计划项关联的已有资源的轻量引用（不含正文内容）。"""
@@ -476,16 +447,14 @@ class StudyPlanUpdate(BaseModel):
     status: Optional[str] = None
 
 
-# ===========================================================
 # Agent 内部状态（LangGraph State）
-# ===========================================================
 
 class AgentState(BaseModel):
     """LangGraph 全局状态，在各 Agent 节点间传递"""
     user_id: int
     session_id: int
     user_message: str
-    chat_history: list[dict[str, str]] = Field(default_factory=list)  # 多轮对话历史
+    chat_history: list[dict[str, str]] = Field(default_factory=list)
     intent_type: Optional[str] = None  # "generate" | "clarify"
     profile: Optional[StudentProfileIn] = None
     kp_id: Optional[str] = None
@@ -501,5 +470,5 @@ class AgentState(BaseModel):
     is_onboarding: bool = False          # 前端标记：当前是否处于画像初始化阶段
     profile_complete: bool = False       # profile_agent 判断后写入，供条件路由使用
     clarify_message: Optional[str] = None  # 追问内容，情况A/B时写入，透传给前端
-    num_questions: int = 4  # 测验题目数量
+    num_questions: int = 4
     question_type_counts: dict[str, int] = Field(default_factory=dict)  # 各题型数量，如 {"single":5,"multi":3,"fill":2}

@@ -1,7 +1,4 @@
-"""
-backend/services/generation.py
-资源生成服务：封装 LangGraph Agent 调用与结果持久化。
-"""
+"""学习资源生成服务：封装 LangGraph Agent 调用与结果持久化。"""
 
 from __future__ import annotations
 
@@ -35,13 +32,7 @@ async def run_generation(
     session_id: int,
     request: dict,
 ) -> None:
-    """
-    后台资源生成任务：
-    1. 调用 LangGraph Agent Pipeline 生成内容
-    2. 将内容持久化到 ResourceMeta
-    3. quiz 类型需额外批量写入 quiz_item 表
-    4. 更新 GenerationTask 状态
-    """
+    """后台资源生成任务：调用 Agent Pipeline 生成内容，持久化到 ResourceMeta，并更新 GenerationTask 状态。"""
     from backend.db.database import _session_factory
     from backend.services import pathway as pathway_svc
 
@@ -54,7 +45,6 @@ async def run_generation(
 
     try:
         async with _session_factory() as db:
-            # -- 阶段 1：初始化 AgentState，执行 Agent Pipeline --
             await update_by_id(
                 db, GenerationTask, task_id,
                 {"status": TaskStatus.running.value, "progress": 10},
@@ -90,7 +80,7 @@ async def run_generation(
                 )
                 return
 
-            # -- RAG 评估采集：与 graph.invoke() 中的钩子保持一致 --
+            # RAG 评估采集：与 graph.invoke() 中的钩子保持一致
             try:
                 from backend.agents.graph import (
                     _collect_generation_eval,
@@ -101,7 +91,6 @@ async def run_generation(
             except Exception:
                 pass  # 评估采集失败不应影响生成主流程
 
-            # -- 阶段 2：内容持久化 --
             await update_by_id(db, GenerationTask, task_id, {"progress": 80})
 
             draft = state.draft_content or ""
@@ -137,13 +126,12 @@ async def run_generation(
                 )
                 return
 
-            # -- 阶段 3：完成 --
             await update_by_id(
                 db, GenerationTask, task_id,
                 {"status": TaskStatus.done.value, "progress": 100},
             )
 
-            # -- 兜底：若用户尚无学习路径，自动从推荐创建一条 --
+            # 兜底：若用户尚无学习路径，自动从推荐创建一条
             try:
                 recommendations = (state.metadata or {}).get("recommendations", [])
                 if recommendations:
@@ -214,7 +202,6 @@ def _parse_anim_block(draft: str) -> str:
     优先取 ```js/javascript 代码块；找不到 fence 则退回裸文本。
     要求最终至少包含 defineAnimation 调用。
     """
-    # 优先匹配显式标注 js/javascript 的代码块
     blocks = re.findall(r"```(?:javascript|js)?\s*\n([\s\S]*?)```", draft, re.IGNORECASE)
     for code in blocks:
         if "defineAnimation" in code:
@@ -332,7 +319,6 @@ async def run_batch_generation(
         except Exception as e:
             logger.error("[batch] task %s failed: %s", cfg["task_id"], e)
 
-    # 更新 batch 状态为 running
     try:
         async with _session_factory() as db:
             await update_by_id(db, GenerationBatch, batch_id, {
@@ -342,10 +328,8 @@ async def run_batch_generation(
     except Exception:
         pass
 
-    # 并行执行所有子任务
     await asyncio.gather(*[_run_single(cfg) for cfg in task_configs], return_exceptions=True)
 
-    # 聚合结果，更新 batch 最终状态
     try:
         async with _session_factory() as db:
             from backend.db.crud import select

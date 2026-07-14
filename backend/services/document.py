@@ -1,6 +1,4 @@
-"""
-backend/services/document.py
-文档导入服务：保存文件、转换为 Markdown、解析内容、索引到向量库。
+"""文档导入服务：保存文件、转换为 Markdown、解析内容、索引到向量库。
 
 支持格式：PDF / DOCX / DOC / Markdown / TXT
 """
@@ -23,19 +21,11 @@ from backend.services.llm import check_embedding_health
 from backend.utils.snowflake import generate_id
 
 
-# ----------------------------------------------------------
-# 配置
-# ----------------------------------------------------------
-
 UPLOAD_DIR = Path(__file__).parent.parent.parent / config.storage.upload_dir
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 SUPPORTED_SUFFIXES = set(config.storage.supported_extensions)
 
-
-# ----------------------------------------------------------
-# 核心接口
-# ----------------------------------------------------------
 
 async def import_document(
     file_path: str,
@@ -58,19 +48,17 @@ async def import_document(
     doc_title = title or path.stem
     file_size_bytes = path.stat().st_size
 
-    # 0. 预检 Embedding API 连通性，避免解析后才发现 API 不可用
+    # 预检 Embedding API 连通性，避免解析后才发现 API 不可用
     if not await check_embedding_health():
         raise RuntimeError(
             "Embedding API 连接失败，无法索引文档。请检查网络连接和 LLM_API_KEY 配置。"
         )
 
-    # 1. 转换为 Markdown 并解析
     t_parse = time.perf_counter()
     chunks = loader.load_file(str(path), doc_id=doc_id)
     parse_ms = (time.perf_counter() - t_parse) * 1000
     logger.info(f"[import_document] 解析完成，生成 {len(chunks)} 个文本块 ({parse_ms:.0f}ms)")
 
-    # 2. 索引到向量库
     t_index = time.perf_counter()
     indexed_count = 0
     if chunks:
@@ -78,7 +66,6 @@ async def import_document(
     index_ms = (time.perf_counter() - t_index) * 1000
     logger.info(f"[import_document] 索引完成，共索引 {indexed_count} 个文本块 ({index_ms:.0f}ms)")
 
-    # 3. 创建资源记录（可选）
     t_db = time.perf_counter()
     resource_id = None
     if db is not None:
@@ -99,7 +86,6 @@ async def import_document(
 
     total_ms = (time.perf_counter() - t_start) * 1000
 
-    # 结构化 metrics 日志
     logger.info(
         f"[Metrics] import_document | "
         f"file={path.name} "
@@ -155,20 +141,18 @@ async def import_document_with_progress(
 
     _cb("saving", 5)
 
-    # 0. 预检 Embedding API 连通性，避免解析后才发现 API 不可用
+    # 预检 Embedding API 连通性，避免解析后才发现 API 不可用
     if not await check_embedding_health():
         raise RuntimeError(
             "Embedding API 连接失败，无法索引文档。请检查网络连接和 LLM_API_KEY 配置。"
         )
 
-    # 1. 转换为 Markdown 并解析
     t_parse = time.perf_counter()
     chunks = loader.load_file(str(path), doc_id=doc_id)
     parse_ms = (time.perf_counter() - t_parse) * 1000
     logger.info(f"[import_document_with_progress] 解析完成，生成 {len(chunks)} 个文本块 ({parse_ms:.0f}ms)")
     _cb("parsing", 20)
 
-    # 2. 索引到向量库（带 batch 进度）
     t_index = time.perf_counter()
     indexed_count = 0
     if chunks:
@@ -186,7 +170,6 @@ async def import_document_with_progress(
     index_ms = (time.perf_counter() - t_index) * 1000
     logger.info(f"[import_document_with_progress] 索引完成，共索引 {indexed_count} 个文本块 ({index_ms:.0f}ms)")
 
-    # 3. 创建资源记录（可选）
     t_db = time.perf_counter()
     resource_id = None
     if db is not None:
@@ -210,7 +193,6 @@ async def import_document_with_progress(
 
     total_ms = (time.perf_counter() - t_start) * 1000
 
-    # 结构化 metrics 日志
     logger.info(
         f"[Metrics] import_document_with_progress | "
         f"file={path.name} "

@@ -1,6 +1,5 @@
 .claude
 .playwright-mcp
-# /CLAUDE.md
 *.pdf
 /demo
 /media
@@ -14,6 +13,7 @@ _prep_submission.ps1
 
 # 环境变量
 .env
+CLAUDE.md
 
 # 配置文件
 # (configs/config.yaml 已纳入 git，敏感值通过 ${ENV_VAR} 引用 .env)

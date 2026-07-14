@@ -1,7 +1,4 @@
-"""
-backend/email/utils.py
-Token 生成/验证、过期时间计算等辅助函数。
-"""
+"""Token 生成/验证、过期时间计算等辅助函数。"""
 
 from __future__ import annotations
 

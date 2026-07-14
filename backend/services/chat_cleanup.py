@@ -1,7 +1,4 @@
-"""
-backend/services/chat_cleanup.py
-聊天会话过期清理服务：定期清理过期的 ChatSession 及关联 ChatMessage。
-"""
+"""聊天会话过期清理服务：定期清理过期的 ChatSession 及关联 ChatMessage。"""
 
 from __future__ import annotations
 
@@ -24,7 +21,6 @@ async def cleanup_expired_sessions() -> None:
     expiry_date = datetime.now() - timedelta(days=config.chat.session_expiry_days)
 
     async with engine.begin() as conn:
-        # 先统计将被删除的消息数
         result = await conn.execute(
             text("""
             SELECT COUNT(*) FROM chat_message
@@ -53,9 +49,7 @@ async def cleanup_expired_sessions() -> None:
 
 
 async def start_cleanup_task() -> None:
-    """
-    启动后台清理任务，每 24 小时执行一次。
-    """
+    """启动后台清理任务，每 24 小时执行一次。"""
     interval = config.chat.cleanup_interval_hours * 3600
     logger.info(f"[ChatCleanup] 启动聊天会话清理后台任务（每{config.chat.cleanup_interval_hours}小时执行一次）")
 

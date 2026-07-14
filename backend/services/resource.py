@@ -1,7 +1,4 @@
-"""
-backend/services/resource.py
-学习资源服务：元数据管理、生成任务跟踪、学习记录。
-"""
+"""学习资源服务：元数据管理、生成任务跟踪、学习记录。"""
 
 from __future__ import annotations
 
@@ -27,10 +24,6 @@ from backend.models.schemas import (
     TaskStatus,
 )
 
-
-# ----------------------------------------------------------
-# 资源元数据
-# ----------------------------------------------------------
 
 async def get_resource(resource_id: int, db: AsyncSession) -> Optional[ResourceMetaOut]:
     """按 ID 查询资源元数据。"""
@@ -68,7 +61,6 @@ async def list_resources(
     if kp_id:
         filters["kp_id"] = kp_id
 
-    # Count total (without limit/offset)
     count_query = sa.select(sa.func.count()).select_from(ResourceMeta).where(ResourceMeta.user_id == user_id)
     if resource_type:
         count_query = count_query.where(ResourceMeta.resource_type == resource_type)
@@ -76,7 +68,6 @@ async def list_resources(
         count_query = count_query.where(ResourceMeta.kp_id == kp_id)
     total = (await db.execute(count_query)).scalar() or 0
 
-    # Paginated results
     resources = await select(
         db, ResourceMeta,
         filters=filters,
@@ -122,21 +113,15 @@ async def delete_resource(resource_id: int, db: AsyncSession) -> bool:
     return await delete_by_id(db, ResourceMeta, resource_id)
 
 
-# ----------------------------------------------------------
-# 生成任务
-# ----------------------------------------------------------
-
 async def create_generation_task(
     user_id: int,
     request: GenerateRequest,
     db: AsyncSession,
 ) -> GenerateTaskOut:
     """
-    在数据库中创建一条 pending 状态的生成任务记录，
-    返回任务 ID 供前端轮询进度。
+    在数据库中创建一条 pending 状态的生成任务记录，返回任务 ID 供前端轮询进度。
     实际异步执行由 BackgroundTasks / Celery 触发。
     """
-    # 先创建资源记录
     # 解析 kp_id → 知识点名称用于标题
     kp_title = request.kp_id
     if request.kp_id.startswith("kp_"):
@@ -156,7 +141,6 @@ async def create_generation_task(
     )
     await db.flush()  # 确保 resource.id 已生成
 
-    # 创建任务记录
     task = await insert(
         db, GenerationTask,
         data={
@@ -202,10 +186,6 @@ async def update_task_progress(
         update_data["resource_id"] = result_id
     await update_by_id(db, GenerationTask, task_id, update_data)
 
-
-# ----------------------------------------------------------
-# 学习记录
-# ----------------------------------------------------------
 
 async def record_learning(
     user_id: int,
@@ -263,10 +243,6 @@ async def list_learning_records(
     return results
 
 
-# ----------------------------------------------------------
-# 批量生成
-# ----------------------------------------------------------
-
 async def create_batch(
     user_id: int,
     request: BatchGenerateRequest,
@@ -278,7 +254,6 @@ async def create_batch(
     """
     from backend.db.models import KGNode
 
-    # 解析知识点名称
     kp_title = request.kp_id
     if request.kp_id.startswith("kp_"):
         node = await select_one(db, KGNode, filters={"id": request.kp_id})
@@ -291,7 +266,6 @@ async def create_batch(
     resource_ids = [generate_id() for _ in range(num_types)]
     task_ids = [generate_id() for _ in range(num_types)]
 
-    # 批量创建 GenerationBatch
     batch = GenerationBatch(
         id=batch_id,
         user_id=user_id,
@@ -302,7 +276,6 @@ async def create_batch(
     )
     db.add(batch)
 
-    # 批量创建 ResourceMeta
     resource_instances = [
         ResourceMeta(
             id=resource_ids[i],
@@ -315,7 +288,6 @@ async def create_batch(
     ]
     db.add_all(resource_instances)
 
-    # 批量创建 GenerationTask
     task_instances = [
         GenerationTask(
             id=task_ids[i],
@@ -385,7 +357,6 @@ async def get_batch_status(batch_id: int, db: AsyncSession) -> Optional[BatchGen
     num_tasks = len(tasks) or 1
     avg_progress = total_progress // num_tasks
 
-    # 计算聚合状态
     if all_done:
         batch_status = TaskStatus.done
     elif any_failed and all(t.status in (TaskStatus.done.value, TaskStatus.failed.value) for t in tasks):
@@ -395,7 +366,6 @@ async def get_batch_status(batch_id: int, db: AsyncSession) -> Optional[BatchGen
     else:
         batch_status = TaskStatus(batch.status)
 
-    # 更新 batch 记录
     await update_by_id(db, GenerationBatch, batch_id, {
         "status": batch_status.value,
         "progress": avg_progress,
