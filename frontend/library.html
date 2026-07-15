@@ -1200,7 +1200,7 @@
                 if (type === 'doc') {
                     const fname = extractPdfFilename(text);
                     if (fname) {
-                        const url = `http://localhost:8000/documents/file/${encodeURIComponent(fname)}`;
+                        const url = `/documents/file/${encodeURIComponent(fname)}`;
                         return `
                             <div style="margin-bottom:10px;color:#6B7280;font-size:13px;">文件：${escapeHtml(fname)}
                                 · <a href="${url}" target="_blank" style="color:#C77B3C;text-decoration:none;">在新标签页打开</a>

@@ -34,12 +34,25 @@ def _profile_to_known_fields(profile) -> dict:
 
 
 async def _check_user_has_documents(user_id: int) -> bool:
-    """检查用户是否在向量库中有已上传的文档。"""
+    """检查是否有可用于该用户的文档：用户自己上传的，或公共知识库（user_id 为 NULL/空）。
+
+    公共知识库由启动时 auto-index 灌入，chunk 的 user_id 为 NULL，属所有用户可用；
+    需一并计入，否则已配置知识库仍会误判为「无文档」而引导上传。
+    """
     try:
-        from backend.db.vector import get_collection
-        col = get_collection()
-        results = await col.get(where={"user_id": str(user_id)}, limit=1)
-        return bool(results and results.get("ids"))
+        from sqlalchemy import text
+        from backend.db.database import get_engine
+        engine = get_engine()
+        async with engine.connect() as conn:
+            result = await conn.execute(
+                text(
+                    "SELECT 1 FROM document_chunk "
+                    "WHERE user_id = :uid OR user_id IS NULL OR user_id = '' "
+                    "LIMIT 1"
+                ),
+                {"uid": str(user_id)},
+            )
+            return result.first() is not None
     except Exception:
         # 向量库不可用时，保守返回 True（不阻断流程）
         return True
