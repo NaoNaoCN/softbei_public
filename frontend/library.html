@@ -1196,8 +1196,10 @@
             const type = r.resource_type;
             if (type === 'doc' || type === 'summary') {
                 const text = r.content || '（暂无内容）';
-                // doc 类型优先识别 PDF：这里 content 通常是「已导入 PDF：xxx.pdf，共 N 个文本块」
-                if (type === 'doc') {
+                // 仅「导入的教材」走 PDF 预览：kp_id 以 doc_ 前缀标识（见 patch_submission_seed）。
+                // AI 生成的文档 kp_id 为 kp_ 前缀，正文虽会引用教材 (.pdf) 但应按 Markdown 渲染，
+                // 不能靠「正文里有无 .pdf」判断，否则会误把生成文档预览成教材 PDF。
+                if (type === 'doc' && typeof r.kp_id === 'string' && r.kp_id.indexOf('doc_') === 0) {
                     const fname = extractPdfFilename(text);
                     if (fname) {
                         const url = `/documents/file/${encodeURIComponent(fname)}`;
