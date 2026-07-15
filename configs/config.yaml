@@ -21,7 +21,7 @@ vector_db:
 # 一键切换：改 llm.provider 为 spark/deepseek/qwen/openai 之一，base_url/default_model/api_key 随之自动匹配
 llm:
   api_key: "${LLM_API_KEY}"      # 全局兜底 key；provider 未单独配置 key 时使用
-  provider: "spark"               # 主 Provider：spark | deepseek | qwen | openai
+  provider: "qwen"               # 主 Provider：spark | deepseek | qwen | openai
   # 级联 failover 顺序；留空=自动推导（主 provider 打头，其余配了独立 key 的按序追加），非空=显式覆盖。非主 provider 需在 providers.<name>.api_key 配独立 key 才生效
   provider_order: []
   default_max_tokens: 2048
@@ -53,7 +53,7 @@ llm:
       api_key: "${DEEPSEEK_API_KEY-}"
     qwen:
       base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
-      default_model: "qwen3.5-plus-2026-04-20"
+      default_model: "qwen3.6-max-preview"
       api_key: "${QWEN_API_KEY-}"
     openai:
       base_url: "https://api.openai.com/v1"
