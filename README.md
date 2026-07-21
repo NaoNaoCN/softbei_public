@@ -23,15 +23,9 @@
 
 ## 技术架构
 
-```
-Aurora UI 前端
-        ↕ REST API
-FastAPI 后端
-  ├── LangGraph 多智能体编排
-  ├── RAG 检索层（PostgreSQL pgvector + HNSW 索引）
-  ├── 邮件服务
-  └── 数据层（SQLAlchemy 2.0 async + PostgreSQL）
-```
+**系统架构**
+
+![系统架构图](assets/system-architecture.png)
 
 **主要依赖**
 
